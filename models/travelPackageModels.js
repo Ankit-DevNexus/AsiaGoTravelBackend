@@ -102,7 +102,7 @@ const travelPackageSchema = new mongoose.Schema({
     // filters
     budget: {
         min: {type: Number, default: 0},
-        max: {type: Number, defaut: 200000},
+        max: {type: Number, default: 200000},
     },
     durationInNights: {type: Number},
     rating: { type: Number, default: 4.8 },
