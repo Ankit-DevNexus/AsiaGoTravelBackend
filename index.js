@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 import  Routes  from "./Routes/routes.js";
 import bodyParser from "body-parser";
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3005;
 const uri = process.env.MONGO_URL;
 
 const app = express();

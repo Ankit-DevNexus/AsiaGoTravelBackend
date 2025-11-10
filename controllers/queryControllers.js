@@ -41,6 +41,8 @@ export const submitQueryForm = async (req, res) => {
             numberOfTravellers,
             monthOfTravel,
             message,
+            packageId,
+            packageTitle,
         } = req.body;
 
         // ✅ Validate input
@@ -66,6 +68,8 @@ export const submitQueryForm = async (req, res) => {
             numberOfTravellers,
             monthOfTravel,
             message,
+            packageId,
+            packageTitle,
         });
 
         console.log("✅ Query saved in DB:", newQuery._id);
@@ -85,6 +89,16 @@ export const submitQueryForm = async (req, res) => {
             <tr><td><strong>Mobile Number:</strong></td><td>${mobileNumber}</td></tr>
             <tr><td><strong>Number of Travellers:</strong></td><td>${numberOfTravellers}</td></tr>
             <tr><td><strong>Month of Travel:</strong></td><td>${monthOfTravel}</td></tr>
+            ${
+              packageTitle
+                ? `<tr><td><strong>Package Title:</strong></td><td>${packageTitle}</td></tr>`
+                : ""
+            }
+            ${
+              packageId
+                ? `<tr><td><strong>Package ID:</strong></td><td>${packageId}</td></tr>`
+                : ""
+            }
             <tr><td><strong>Message:</strong></td><td>${message}</td></tr>
           </table>
 
@@ -107,10 +121,12 @@ export const submitQueryForm = async (req, res) => {
 
         <div style="padding: 24px;">
           <p>Hi ${fullName},</p>
-          <p>We’ve received your travel query and our team will get back to you soon with the best itinerary and pricing options.</p>
+          <p>We’ve received your travel query${
+            packageTitle ? ` for <strong>${packageTitle}</strong>` : ""
+          } and our team will get back to you soon with the best itinerary and pricing options.</p>
 
           <div style="background: #f9f9f9; border-left: 4px solid #1E88E5; padding: 12px 16px; margin: 16px 0;">
-            <p><strong>Your Query Details:</strong></p>
+            <p><strong>Your Message:</strong></p>
             <p>${message}</p>
           </div>
 
@@ -118,7 +134,7 @@ export const submitQueryForm = async (req, res) => {
             <a href="https://asiagotravel.com/packages" target="_blank" style="color: #1E88E5;">latest travel packages</a>.
           </p>
 
-          <p>Warm regards,<br><strong>The AsiaGoTravel Team</strong></p>
+          <p>Warm regards,<br><strong>The AsiaGo Travels Team</strong></p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
           <p style="font-size: 12px; color: #777;">This is an automated email — please do not reply directly.</p>
         </div>
@@ -126,8 +142,18 @@ export const submitQueryForm = async (req, res) => {
     `;
 
         // ✅ Send both emails
-        await sendEmail(process.env.ADMIN_EMAIL, "New Travel Query Submission", adminEmailHTML);
-        await sendEmail(email, "Thanks for your travel enquiry!", userEmailHTML);
+        await sendEmail(
+      process.env.ADMIN_EMAIL,
+      `New Travel Query: ${packageTitle || "General Enquiry"}`,
+      adminEmailHTML
+    );
+
+    await sendEmail(
+      email,
+      `Thanks for your enquiry${packageTitle ? " about " + packageTitle : ""}!`,
+      userEmailHTML
+    );
+
 
         return res.status(200).json({
             success: true,
