@@ -24,7 +24,15 @@ const querySchema = new mongoose.Schema({
     message: {
         type: String,
         required: true
-    }
+    },
+
+    // ✅ new fields
+    packageId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "travelPackage", // your travel package model name
+        required: false,
+    },
+    packageTitle: { type: String }, // optional for quick admin viewing
 });
 
 const queryModel = mongoose.model("queryForm", querySchema);
