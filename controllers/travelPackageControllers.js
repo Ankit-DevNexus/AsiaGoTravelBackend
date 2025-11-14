@@ -12,7 +12,7 @@ const parseIfString = (value) => {
     }
 };
 
-// ✅ CREATE TRAVEL PACKAGE
+// CREATE TRAVEL PACKAGE
 export const createTravelPackage = async (req, res) => {
     try {
         const {
@@ -41,7 +41,7 @@ export const createTravelPackage = async (req, res) => {
             filterTags,
         } = req.body;
 
-        // ✅ Upload main images
+        // Upload main images
         let imageUrls = [];
         if (req.files?.images?.length > 0) {
             const uploaded = await Promise.all(
@@ -53,7 +53,7 @@ export const createTravelPackage = async (req, res) => {
             imageUrls = uploaded.filter(Boolean);
         }
 
-        // ✅ Upload feature icons
+        // Upload feature icons
         let iconUrls = [];
         if (req.files?.icons?.length > 0) {
             const uploadedIcons = await Promise.all(
@@ -65,7 +65,7 @@ export const createTravelPackage = async (req, res) => {
             iconUrls = uploadedIcons.filter(Boolean);
         }
 
-        // ✅ Upload overview category icons
+        // Upload overview category icons
         let overviewIcons = [];
         if (req.files?.overviewCategoryIcons?.length > 0) {
             const uploadedOverviewIcons = await Promise.all(
@@ -77,14 +77,14 @@ export const createTravelPackage = async (req, res) => {
             overviewIcons = uploadedOverviewIcons.filter(Boolean);
         }
 
-        // ✅ Build overview categories array
+        // Build overview categories array
         const parsedOverviewCategoryIcons = parseIfString(overviewCategoryIcons) || [];
         const finalOverviewCategoryIcons = parsedOverviewCategoryIcons.map((cat, index) => ({
             name: cat.name || cat,
             icon: overviewIcons[index] || cat.icon || "",
         }));
 
-        // ✅ Create new travel package
+        // Create new travel package
         const newPackage = await travelPackageModel.create({
             title,
             location,
@@ -177,7 +177,7 @@ export const getAllTravelPackages = async (req, res) => {
     }
 };
 
-// ✅ GET PACKAGE BY ID
+// GET PACKAGE BY ID
 export const getAllTravelPackageById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -191,7 +191,6 @@ export const getAllTravelPackageById = async (req, res) => {
     }
 };
 
-// ✅ UPDATE PACKAGE
 export const updateTravelPackage = async (req, res) => {
     try {
         const { id } = req.params;
@@ -206,7 +205,7 @@ export const updateTravelPackage = async (req, res) => {
             return res.status(404).json({ success: false, message: "Package not found" });
         }
 
-        // ✅ Handle new uploads
+        // Handle new uploads
         const uploadFiles = async (files) => {
             if (!files || files.length === 0) return [];
             const uploaded = await Promise.all(files.map((file) => uploadOnCloudinary(file.path)));
@@ -259,7 +258,7 @@ export const updateTravelPackage = async (req, res) => {
     }
 };
 
-// ✅ DELETE PACKAGE
+// DELETE PACKAGE
 export const deleteTravelPackage = async (req, res) => {
     try {
         const { id } = req.params;
