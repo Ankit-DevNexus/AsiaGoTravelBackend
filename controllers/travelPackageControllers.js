@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
-import travelPackageModel from "../models/travelPackageModels.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import travelPackageModel from "../models/travelpackagemodels.js";
 
 // Helper function to safely parse JSON
 const parseIfString = (value) => {
