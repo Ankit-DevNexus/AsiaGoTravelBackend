@@ -43,7 +43,11 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
+
 userSchema.methods.generateAuthToken = function () {
+    if (!process.env.JWT_SECRET) {
+        throw new Error("JWT_SECRET is not defined in environment variables!");
+    }
     return jwt.sign(
         {id: this._id, role: this.role},
         process.env.JWT_SECRET,
