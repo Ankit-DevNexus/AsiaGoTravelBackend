@@ -113,7 +113,7 @@ export const forgotPassword = async (req, res) => {
             <p>Click below to reset your password:</p>
             <a href="${resetUrl}" target="_blank">${resetUrl}</a>
             <p>This link expires in 10 minutes.</p>
-          `,
+            `,
                 });
             } catch (mailErr) {
                 console.error("Email send error:", mailErr.message);

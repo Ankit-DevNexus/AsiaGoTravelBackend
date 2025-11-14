@@ -1,11 +1,10 @@
 import express from "express";
-import { upload, svgUpload } from "../middleware/multer.js";
+import { upload } from "../middleware/multer.js";
 import { createTravelPackage, deleteTravelPackage, getAllTravelPackageById, getAllTravelPackages, updateTravelPackage } from "../controllers/travelPackageControllers.js";
 import { submitContactUs } from "../controllers/contactUsControllers.js";
 import { submitQueryForm } from "../controllers/queryControllers.js";
 import { createTestimonial, getAllTestimonials, syncGoogleReviews } from "../controllers/testimonialsControllers.js";
 import { AllBlogController, BlogController, BlogImageController, DeleteBlogController, EditBlogController, getBlogByIdController } from "../controllers/blogControllers.js";
-import authRoutes from "./routes.js";
 import { forgotPassword, loginUser, registerUser, resetPassword } from "../controllers/userControllers.js";
 import { protect } from "../middleware/authMiddleware.js";
 
