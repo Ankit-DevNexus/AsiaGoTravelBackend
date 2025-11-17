@@ -28,9 +28,8 @@ app.get("/", (req, res) => {
 });
 
 // mongodb connection
-app.listen(PORT, () => {
-    console.log("App Started");
-    mongoose.connect(uri)
+
+    mongoose.connect(uri) 
     .then(() => {
         console.log("✅ DB Connected Successfully");
         app.listen(PORT, () => {
@@ -40,4 +39,3 @@ app.listen(PORT, () => {
     .catch((err) => {
         console.error("❌ MongoDB Connection Failed:", err.message);
     });
-});
