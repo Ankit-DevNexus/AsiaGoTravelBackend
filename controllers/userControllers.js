@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 
-// ✅ REGISTER ADMIN
+// REGISTER ADMIN
 export const registerUser = async (req, res) => {
     try {
         const { name, email, phoneNumber, password, confirmPassword } = req.body;
@@ -32,12 +32,12 @@ export const registerUser = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("❌ Signup error:", error);
+        console.error("Signup error:", error);
         res.status(500).json({ success: false, message: "Server Error", error: error.message });
     }
 };
 
-// ✅ LOGIN (Email or Phone)
+// LOGIN (Email or Phone)
 export const loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -70,12 +70,12 @@ export const loginUser = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("❌ Login error:", error);
+        console.error(" Login error:", error);
         res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
 };
 
-// ✅ FORGOT PASSWORD
+//FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -88,6 +88,9 @@ export const forgotPassword = async (req, res) => {
         user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
         user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
+        console.log("✅ Raw resetToken sent in email:", resetToken);
+        console.log("✅ Hashed token saved in DB:", user.resetPasswordToken);
+
 
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
@@ -97,7 +100,7 @@ export const forgotPassword = async (req, res) => {
                 const transporter = nodemailer.createTransport({
                     host: process.env.SMTP_HOST,
                     port: process.env.SMTP_PORT,
-                    secure: false,
+                    // secure: false,
                     auth: {
                         user: process.env.EMAIL_USER,
                         pass: process.env.EMAIL_PASS,
@@ -125,18 +128,28 @@ export const forgotPassword = async (req, res) => {
             message: "Password reset link sent to your email (valid for 10 minutes).",
         });
     } catch (error) {
-        console.error("❌ Forgot Password error:", error);
+        console.error(" Forgot Password error:", error);
         res.status(500).json({ success: false, message: "Server Error", error: error.message });
     }
 };
 
-// ✅ RESET PASSWORD
+//  RESET PASSWORD
 export const resetPassword = async (req, res) => {
     try {
+        // console.log("🔑 Token received from URL:", token);
+        // console.log("🔒 Hashed token for lookup:", crypto.createHash("sha256").update(token).digest("hex"));
+
         const { token } = req.params;
         const { password } = req.body;
 
+        if (!token) {
+            return res.status(400).json({ success: false, message: "Token is missing in the URL." });
+        }
+
         const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+        console.log("🔑 Token received from URL:", token);
+        console.log("🔒 Hashed token for lookup:", hashedToken)
 
         const user = await userModel.findOne({
             resetPasswordToken: hashedToken,
@@ -157,7 +170,7 @@ export const resetPassword = async (req, res) => {
             message: "Password reset successful. You can now login with your new password.",
         });
     } catch (error) {
-        console.error("❌ Reset Password error:", error);
+        console.error("Reset Password error:", error);
         res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
 };
