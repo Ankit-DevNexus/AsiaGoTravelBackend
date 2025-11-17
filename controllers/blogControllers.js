@@ -16,9 +16,9 @@ console.log("Cloudinary config:", {
 
 export const BlogController = async (req, res) => {
     try {
-        console.log("=== BlogController payload ===");
-        console.log("req.body:", req.body);
-        console.log("req.file:", req.file);
+        // console.log("=== BlogController payload ===");
+        // console.log("req.body:", req.body);
+        // console.log("req.file:", req.file);
 
         const { title, blogContent } = req.body;
 
