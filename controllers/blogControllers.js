@@ -16,13 +16,13 @@ console.log("Cloudinary config:", {
 
 export const BlogController = async (req, res) => {
     try {
-        console.log("=== BlogController payload ===");
-        console.log("req.body:", req.body);
-        console.log("req.file:", req.file);
+        // console.log("=== BlogController payload ===");
+        // console.log("req.body:", req.body);
+        // console.log("req.file:", req.file);
 
-        const { title, blogContent } = req.body;
+        const { title, blogContent, ctaText, author, category } = req.body;
 
-        if (!title || !blogContent) {
+        if (!title || !blogContent || !category) {
             return res.status(400).json({
                 success: false,
                 message: "Missing required fields",
@@ -50,6 +50,9 @@ export const BlogController = async (req, res) => {
             title,
             blogContent,
             featureImage: uploadedImage.secure_url,
+            ctaText: ctaText || "Plan your next trip with us ->",
+            author: author || "Travel Expert Team",
+            category,
         });
 
         res.status(201).json({
@@ -153,7 +156,7 @@ export const BlogImageController = async (req, res) => {
 export const EditBlogController = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, blogContent } = req.body || {};
+        const { title, blogContent, ctaText, author, category } = req.body || {};
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -173,6 +176,9 @@ export const EditBlogController = async (req, res) => {
         const updateFields = {};
         if (title?.trim()) updateFields.title = title.trim();
         if (blogContent?.trim()) updateFields.blogContent = blogContent.trim();
+        if (ctaText) updateFields.ctaText = ctaText;
+        if (author) updateFields.author = author;
+        if (category) updateFields.category = category;
 
         // ✅ Replace image if new one uploaded
         if (req.file) {

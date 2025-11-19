@@ -5,8 +5,8 @@ import { v2 as cloudinary } from "cloudinary";
 
 export const createTestimonial = async (req, res) => {
     try {
-        const { name, packageName, message, rating, date, image } = req.body;
-        if (!name || !packageName || !message || !rating) {
+        const { name, message, rating, date } = req.body;
+        if (!name|| !message || !rating) {
             return res.status(400).json({
                 success: false, message: "All required fields are needed"
             });
@@ -22,7 +22,6 @@ export const createTestimonial = async (req, res) => {
 
         const testimonial = await testimonialModel.create({
             name,
-            packageName,
             message,
             rating,
             date,
@@ -79,7 +78,7 @@ export const getTestimonialById = async (req, res) => {
 export const updateTestimonial = async (req, res) => {
     try {
         const {id} = req.params;
-        const {name, packageName, message, rating, date} = req.body;
+        const {name, message, rating, date} = req.body;
 
         const testimonial = await testimonialModel.findById(id);
         if(!testimonial) {
@@ -101,7 +100,7 @@ export const updateTestimonial = async (req, res) => {
             imageUrl = uploadResult.secure_url;
         }
         testimonial.name = name || testimonial.name;
-        testimonial.packageName = packageName || testimonial.packageName;
+        // testimonial.packageName = packageName || testimonial.packageName;
         testimonial.message = message || testimonial.message;
         testimonial.rating = rating || testimonial.rating;
         testimonial.date = date || testimonial.date;

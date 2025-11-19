@@ -5,7 +5,7 @@ import express from "express";
 
 import cors from 'cors';
 import mongoose from "mongoose";
-import  Routes  from "./Routes/routes.js";
+import Routes from "./Routes/routes.js";
 import bodyParser from "body-parser";
 
 const PORT = process.env.PORT || 3005;
@@ -16,7 +16,7 @@ const app = express();
 app.use(cors());
 
 app.use(bodyParser.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
@@ -28,9 +28,8 @@ app.get("/", (req, res) => {
 });
 
 // mongodb connection
-app.listen(PORT, () => {
-    console.log("App Started");
-    mongoose.connect(uri)
+
+mongoose.connect(uri)
     .then(() => {
         console.log("✅ DB Connected Successfully");
         app.listen(PORT, () => {
@@ -40,4 +39,3 @@ app.listen(PORT, () => {
     .catch((err) => {
         console.error("❌ MongoDB Connection Failed:", err.message);
     });
-});

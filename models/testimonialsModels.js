@@ -6,11 +6,11 @@ const testimonialsSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    packageName: {
-        type: String,
-        required: true,
-        trim: true
-    },
+    // packageName: {
+    //     type: String,
+    //     required: true,
+    //     trim: true
+    // },
     message: {
         type: String,
         required: true,
@@ -22,10 +22,10 @@ const testimonialsSchema = new mongoose.Schema({
         min: 1,
         max: 5,
     },
-    date: {
-        type: Date,
-        default: Date.now,
-    },
+    // date: {
+    //     type: Date,
+    //     default: Date.now,
+    // },
     image: {
         type: String,
         default: "",
