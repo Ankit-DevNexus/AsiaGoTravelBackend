@@ -88,8 +88,9 @@ export const forgotPassword = async (req, res) => {
         user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
         user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
-        console.log("✅ Raw resetToken sent in email:", resetToken);
-        console.log("✅ Hashed token saved in DB:", user.resetPasswordToken);
+        
+        console.log("Raw resetToken sent in email:", resetToken);
+        console.log("Hashed token saved in DB:", user.resetPasswordToken);
 
 
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
@@ -160,7 +161,6 @@ export const resetPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid or expired token." });
 
         user.password = password;
-        user.confirmPassword = password;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         await user.save();

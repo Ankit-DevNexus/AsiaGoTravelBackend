@@ -13,6 +13,25 @@ const blogSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    ctaText: {
+        type: String,
+        default: "Plan your next trip with us ->",
+    },
+    author: {
+        type: String,
+        default: "Travel Expert Team",
+    },
+    category: {
+        type: String,
+        required: true,
+        enum: [
+            "Travel Tips",
+            "Destination Guides",
+            "Budget Travel",
+            "Seasonal Trips",
+            "Inspiration Stories",
+        ],
+    }
 }, {
     timestamps: true
 });

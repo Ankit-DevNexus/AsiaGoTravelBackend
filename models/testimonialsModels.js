@@ -6,11 +6,11 @@ const testimonialsSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    packageName: {
-        type: String,
-        required: true,
-        trim: true
-    },
+    // packageName: {
+    //     type: String,
+    //     required: true,
+    //     trim: true
+    // },
     message: {
         type: String,
         required: true,
