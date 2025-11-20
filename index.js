@@ -32,11 +32,11 @@ app.get("/", (req, res) => {
 mongoose
   .connect(uri)
   .then(() => {
-    console.log("✅ DB Connected Successfully");
+    console.log("DB Connected Successfully");
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("❌ MongoDB Connection Failed:", err.message);
+    console.error("MongoDB Connection Failed:", err.message);
   });
