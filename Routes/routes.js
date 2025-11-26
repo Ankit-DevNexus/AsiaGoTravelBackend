@@ -40,7 +40,7 @@ const router = express.Router();
 
 router.post(
   "/addPackage",
-  protect,
+  // protect,
   upload.fields([
     { name: "images", maxCount: 10 },
     { name: "icons", maxCount: 10 },
@@ -62,7 +62,7 @@ router.patch(
   ]),
   updateTravelPackage
 );
-router.delete("/delete/:id", protect, deleteTravelPackage);
+router.delete("/package/delete/:id", deleteTravelPackage);
 
 router.post("/contact-us", submitContactUs);
 
