@@ -13,7 +13,40 @@ const uri = process.env.MONGO_URL;
 
 const app = express();
 
-app.use(cors());
+// app.use(cors());
+
+// CORS CONFIG
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+
+  "http://194.238.18.1",
+
+  "http://ghardekhoapna.com",
+  "https://ghardekhoapna.com",
+  "http://www.ghardekhoapna.com",
+  "https://www.ghardekhoapna.com",
+
+  "http://dashboard.ghardekhoapna.com",
+  "https://dashboard.ghardekhoapna.com",
+  "http://www.dashboard.ghardekhoapna.com",
+  "https://www.dashboard.ghardekhoapna.com",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS: " + origin));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
