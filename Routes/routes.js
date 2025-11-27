@@ -1,5 +1,5 @@
 import express from "express";
-import { upload } from "../middleware/multer.js";
+import upload from "../middleware/multer.js";
 import {
   createTravelPackage,
   deleteTravelPackage,
@@ -42,9 +42,8 @@ router.post(
   "/addPackage",
   // protect,
   upload.fields([
-    { name: "images", maxCount: 10 },
+    { name: "overviewImages", maxCount: 10 },
     { name: "icons", maxCount: 10 },
-    { name: "overviewCategoryIcons", maxCount: 10 },
   ]),
   createTravelPackage
 );
@@ -53,11 +52,11 @@ router.get("/allPackage", getAllTravelPackages);
 
 router.get("/allPackage/:id", getAllTravelPackageById);
 router.patch(
-  "/update/:id",
-  protect,
+  "/package/update/:id",
+  // protect,
   upload.fields([
     { name: "images", maxCount: 10 },
-    { name: "thingsToPackIcons", maxCount: 10 },
+    { name: "icons", maxCount: 10 },
     { name: "overviewCategoryIcons", maxCount: 10 },
   ]),
   updateTravelPackage

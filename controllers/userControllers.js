@@ -58,12 +58,10 @@ export const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Email/Phone and Password required.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Email/Phone and Password required.",
+      });
 
     const isEmail = username.includes("@");
     const query = isEmail
@@ -84,7 +82,7 @@ export const loginUser = async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: 30,
+      expiresIn: "1d",
     });
 
     res.status(200).json({
