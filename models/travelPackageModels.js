@@ -1,3 +1,129 @@
+import mongoose from "mongoose";
+
+const itinerarySchema = new mongoose.Schema({
+  day: { type: String },
+  title: { type: String },
+  description: [{ type: String }],
+});
+
+const overviewCategorySchema = new mongoose.Schema({
+  // Images
+  images: {
+    type: [String],
+  },
+
+  overview: {
+    type: String,
+    trim: true,
+  },
+
+  // Details Tabs
+  itinerary: [itinerarySchema],
+  inclusions: [{ type: String, trim: true }],
+  exclusions: [{ type: String, trim: true }],
+  summary: [{ type: String, trim: true }],
+});
+
+const priceSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["Double", "Triple"],
+  },
+  originalPrice: {
+    type: Number,
+    default: 0,
+  },
+  discountedPrice: {
+    type: Number,
+  },
+  currency: {
+    type: String,
+    default: "$",
+  },
+  note: {
+    type: String,
+    trim: true,
+    default: "Per Person",
+  },
+});
+
+const subCategorySchema = new mongoose.Schema({
+  main: {
+    type: String,
+
+    enum: [
+      "honeymoonTrip",
+      "familyGroupTrip",
+      "familtHoliday",
+      "bachelorTours",
+      "luxuryTours",
+      "premiumHolidayPackage",
+      "personalizdTours",
+    ],
+  },
+});
+
+const travelPackageSchema = new mongoose.Schema(
+  {
+    // Trip Category (Main + Sub)
+    subTripCategory: subCategorySchema,
+    tripDuration: {
+      days: { type: Number },
+      nights: { type: Number },
+    },
+    // Basic Info
+    title: {
+      type: String,
+
+      trim: true,
+    },
+    location: {
+      type: String,
+
+      trim: true,
+    },
+
+    // Tags (with icons)
+    overviewCategory: [overviewCategorySchema],
+
+    priceDetails: [priceSchema],
+
+    // durationInNights: { type: Number },
+    rating: { type: Number, default: 4.8 },
+
+    // Key Features
+    features: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    icons: [
+      {
+        name: { type: String, trim: true },
+        icon: { type: String, trim: true },
+      },
+    ],
+
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+const tripCategorySchema = new mongoose.Schema(
+  {
+    tripCategory: {
+      type: String,
+      enum: ["InternationalTrips", "DomesticTrips"],
+    },
+    Packages: [travelPackageSchema],
+  },
+  { timestamps: true }
+);
+
+const travelPackageModel = mongoose.model("travelpackage", tripCategorySchema);
+export default travelPackageModel;
+
 // import mongoose from "mongoose";
 
 // const itinerarySchema = new mongoose.Schema({
@@ -165,174 +291,3 @@
 
 // const travelPackageModel = mongoose.model("travelpackage", travelPackageSchema);
 // export default travelPackageModel;
-
-import mongoose from "mongoose";
-
-const itinerarySchema = new mongoose.Schema({
-  day: { type: String },
-  title: { type: String },
-  description: { type: String },
-});
-
-const priceSchema = new mongoose.Schema({
-  type: {
-    type: String,
-
-    enum: ["Double", "Triple"],
-  },
-  originalPrice: {
-    type: Number,
-    default: 0,
-  },
-  discountedPrice: {
-    type: Number,
-  },
-  currency: {
-    type: String,
-    default: "$",
-  },
-  note: {
-    type: String,
-    trim: true,
-    default: "Per Person",
-  },
-});
-
-const subCategorySchema = new mongoose.Schema({
-  main: {
-    type: String,
-
-    enum: [
-      "honeymoonTrip",
-      "familyGroupTrip",
-      "familtHoliday",
-      "bachelorTours",
-      "luxuryTours",
-      "premiumHolidayPackage",
-      "personalizdTours",
-    ],
-  },
-});
-
-const overviewCategorySchema = new mongoose.Schema({
-  name: { type: String },
-  icon: { type: String }, // Cloudinary URL
-});
-
-const travelPackageSchema = new mongoose.Schema(
-  {
-    // Basic Info
-    title: {
-      type: String,
-
-      trim: true,
-    },
-    location: {
-      type: String,
-
-      trim: true,
-    },
-    tripDuration: {
-      days: { type: Number },
-      nights: { type: Number },
-    },
-    overview: {
-      type: String,
-
-      trim: true,
-    },
-
-    // Tags (with icons)
-    overviewCategoryIcons: [overviewCategorySchema],
-
-    // Images
-    images: {
-      type: [String],
-    },
-
-    // Trip Category (Main + Sub)
-    subTripCategory: subCategorySchema,
-
-    // Price info
-    price: {
-      type: Number,
-    },
-    currency: {
-      type: String,
-      default: "USD", //show $ symbol
-    },
-    priceDetails: [priceSchema],
-
-    // filters
-    budget: {
-      min: { type: Number, default: 0 },
-      max: { type: Number, default: 200000 },
-    },
-    durationInNights: { type: Number },
-    rating: { type: Number, default: 4.8 },
-    filterTags: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    famousDestinations: [{ type: String, trim: true }],
-
-    pickupDrop: {
-      type: String,
-
-      trim: true,
-    },
-
-    // Key Features
-    features: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    icons: [
-      {
-        type: String, // Cloudinary URL or local path of the icon image
-
-        trim: true,
-      },
-    ],
-    // discountPrice: { type: Number },
-
-    // Details Tabs
-    itinerary: [itinerarySchema],
-    inclusions: [{ type: String, trim: true }],
-    exclusions: [{ type: String, trim: true }],
-    summary: [{ type: String, trim: true }],
-    // thingsToPack: [thingsToPackSchema],
-    // tags: [{ type: String, trim: true }],
-
-    // Search Details
-    searchDetails: {
-      source: { type: String, trim: true },
-      destination: { type: String, trim: true },
-      departureDate: { type: Date },
-      rooms: { type: Number, default: 1 },
-      adults: { type: Number, default: 2 },
-      children: { type: Number, default: 0 },
-      filters: { type: String, trim: true },
-    },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true }
-);
-
-const tripCategorySchema = new mongoose.Schema(
-  {
-    tripCategory: {
-      type: String,
-      enum: ["InternationalTrips", "DomesticTrips"],
-    },
-    Packages: [travelPackageSchema],
-  },
-  { timestamps: true }
-);
-
-const travelPackageModel = mongoose.model("travelpackage", tripCategorySchema);
-export default travelPackageModel;

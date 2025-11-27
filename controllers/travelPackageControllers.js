@@ -1,7 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import travelPackageModel from "../models/travelPackageModels.js";
+
 // Helper function to safely parse JSON
 const parseIfString = (value) => {
   try {
@@ -20,33 +22,47 @@ export const createTravelPackage = async (req, res) => {
     if (!tripCategory) {
       return res.status(400).json({
         success: false,
-        message: "tripCategory is required!",
+        message: "tripCategory is required",
       });
     }
 
-    // Validate package data
-    const pkg = Packages?.[0];
-    if (!pkg) {
+    // Validate Packages array
+    if (!Array.isArray(Packages) || Packages.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Package data missing!",
+        message: "Packages array is required",
       });
     }
 
-    // Copy package data
-    const newPackage = { ...pkg };
+    // Take first package (current API design)
+    const pkg = Packages[0];
 
-    // Check if category exists
+    // Construct exactly as per schema (no mutation)
+    const newPackage = {
+      subTripCategory: pkg.subTripCategory,
+      title: pkg.title,
+      location: pkg.location,
+      tripDuration: pkg.tripDuration,
+      overviewCategory: pkg.overviewCategory,
+      priceDetails: pkg.priceDetails,
+      durationInNights: pkg.durationInNights,
+      rating: pkg.rating,
+      features: pkg.features,
+      icons: pkg.icons,
+      isActive: pkg.isActive ?? true,
+    };
+
+    // Find category
     let category = await travelPackageModel.findOne({ tripCategory });
 
     if (!category) {
-      // Create NEW category document
+      // Create NEW category with package
       category = await travelPackageModel.create({
         tripCategory,
         Packages: [newPackage],
       });
     } else {
-      // Add package to existing category
+      // Push package into existing category
       category.Packages.push(newPackage);
       await category.save();
     }
@@ -57,8 +73,11 @@ export const createTravelPackage = async (req, res) => {
       data: newPackage,
     });
   } catch (error) {
-    console.log("Create package error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Create package error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -297,7 +316,7 @@ export const updateTravelPackage = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "✅ Package updated successfully",
+      message: "Package updated successfully",
       data: updatedPackage,
     });
   } catch (error) {
