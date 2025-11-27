@@ -5,13 +5,13 @@ import travelPackageModel from "../models/travelPackageModels.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 // Helper function to safely parse JSON
-const parseIfString = (value) => {
-  try {
-    return typeof value === "string" ? JSON.parse(value) : value;
-  } catch {
-    return value;
-  }
-};
+// const parseIfString = (value) => {
+//   try {
+//     return typeof value === "string" ? JSON.parse(value) : value;
+//   } catch {
+//     return value;
+//   }
+// };
 
 // CREATE TRAVEL PACKAGE
 // export const createTravelPackage = async (req, res) => {
@@ -100,7 +100,18 @@ export const createTravelPackage = async (req, res) => {
     }
 
     // Parse Packages (sent as JSON string)
-    const parsedPackages = JSON.parse(Packages);
+    let parsedPackages;
+
+    try {
+      parsedPackages =
+        typeof Packages === "string" ? JSON.parse(Packages) : Packages;
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Packages JSON format",
+      });
+    }
+
     const pkg = parsedPackages[0];
 
     /* ================================
@@ -122,16 +133,31 @@ export const createTravelPackage = async (req, res) => {
     ================================= */
     let uploadedIcons = [];
 
-    if (req.files?.icons && Array.isArray(pkg.icons)) {
+    // if (req.files?.icons && Array.isArray(pkg.icons)) {
+    //   for (let i = 0; i < req.files.icons.length; i++) {
+    //     const file = req.files.icons[i];
+    //     const iconMeta = pkg.icons[i]; // { name }
+
+    //     const uploadResult = await uploadOnCloudinary(file.path);
+
+    //     if (uploadResult?.secure_url) {
+    //       uploadedIcons.push({
+    //         name: iconMeta?.name || "icon",
+    //         icon: uploadResult.secure_url,
+    //       });
+    //     }
+    //   }
+    // }
+    if (req.files?.icons) {
       for (let i = 0; i < req.files.icons.length; i++) {
         const file = req.files.icons[i];
-        const iconMeta = pkg.icons[i]; // { name }
+        const iconMeta = pkg.icons?.[i];
 
         const uploadResult = await uploadOnCloudinary(file.path);
 
         if (uploadResult?.secure_url) {
           uploadedIcons.push({
-            name: iconMeta?.name || "icon",
+            name: iconMeta?.name ?? file.originalname,
             icon: uploadResult.secure_url,
           });
         }
