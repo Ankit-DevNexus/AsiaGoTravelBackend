@@ -50,10 +50,10 @@ app.use(
 
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 app.use("/api", Routes);
+app.use(express.json());
 
 // for testing
 app.get("/", (req, res) => {

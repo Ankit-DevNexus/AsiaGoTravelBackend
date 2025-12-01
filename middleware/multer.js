@@ -1,6 +1,37 @@
 // import multer from "multer";
 
 // const storage = multer.diskStorage({
+//   destination: "uploads/",
+//   filename: (req, file, cb) => {
+//     cb(null, Date.now() + "-" + file.originalname);
+//   },
+// });
+
+// const upload = multer({
+//   storage,
+//   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+// });
+
+// export default upload;
+import multer from "multer";
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+// IMPORTANT: do NOT add fileFilter for now
+const upload = multer({ storage });
+
+export default upload;
+
+// import multer from "multer";
+
+// const storage = multer.diskStorage({
 //     destination: function(req, file, cb) {
 //         cb(null, './public/temp');
 //     },
@@ -28,18 +59,3 @@
 
 // export const upload = multer({storage: storage});
 // export const svgUpload = multer({storage: svgStorage, fileFilter: svgfileFilter});
-import multer from "multer";
-
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
-});
-
-export default upload;
