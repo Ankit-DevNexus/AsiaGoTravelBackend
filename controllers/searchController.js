@@ -1,8 +1,8 @@
 import travelPackageModel from "../models/travelPackageModels.js";
-import {
-  getKeywordSuggestions,
-  saveKeyword,
-} from "../services/redisServices.js";
+// import {
+//   getKeywordSuggestions,
+//   saveKeyword,
+// } from "../services/redisServices.js";
 
 export const filterTravelPackages = async (req, res) => {
   try {
@@ -125,145 +125,145 @@ export const filterTravelPackages = async (req, res) => {
   }
 };
 
-export const suggestionController = async (req, res) => {
-  try {
-    const { keyword } = req.query;
-    if (!keyword) return res.json({ suggestions: [] });
+// export const suggestionController = async (req, res) => {
+//   try {
+//     const { keyword } = req.query;
+//     if (!keyword) return res.json({ suggestions: [] });
 
-    //  Redis (fastest)
-    const redisSuggestions = await getKeywordSuggestions(keyword);
-    if (redisSuggestions.length >= 5) {
-      return res.json({ suggestions: redisSuggestions.slice(0, 10) });
-    }
+//     //  Redis (fastest)
+//     const redisSuggestions = await getKeywordSuggestions(keyword);
+//     if (redisSuggestions.length >= 5) {
+//       return res.json({ suggestions: redisSuggestions.slice(0, 10) });
+//     }
 
-    const regex = new RegExp(`^${keyword}`, "i");
+//     const regex = new RegExp(`^${keyword}`, "i");
 
-    // Mongo suggestions from travel packages
-    const dbResults = await travelPackageModel.aggregate([
-      { $unwind: "$Packages" },
-      {
-        $match: {
-          $or: [
-            { "Packages.title": regex },
-            { "Packages.location": regex },
-            { "Packages.subTripCategory.main": regex },
-            { "Packages.features": regex },
-          ],
-        },
-      },
-      {
-        $project: {
-          suggestion: {
-            $ifNull: ["$Packages.title", "$Packages.location"],
-          },
-        },
-      },
-      { $limit: 10 },
-    ]);
+//     // Mongo suggestions from travel packages
+//     const dbResults = await travelPackageModel.aggregate([
+//       { $unwind: "$Packages" },
+//       {
+//         $match: {
+//           $or: [
+//             { "Packages.title": regex },
+//             { "Packages.location": regex },
+//             { "Packages.subTripCategory.main": regex },
+//             { "Packages.features": regex },
+//           ],
+//         },
+//       },
+//       {
+//         $project: {
+//           suggestion: {
+//             $ifNull: ["$Packages.title", "$Packages.location"],
+//           },
+//         },
+//       },
+//       { $limit: 10 },
+//     ]);
 
-    const dbSuggestions = dbResults.map((r) => r.suggestion);
+//     const dbSuggestions = dbResults.map((r) => r.suggestion);
 
-    // enough results? stop early
-    if (redisSuggestions.length + dbSuggestions.length >= 5) {
-      return res.json({
-        suggestions: [
-          ...new Set([...redisSuggestions, ...dbSuggestions]),
-        ].slice(0, 10),
-      });
-    }
+//     // enough results? stop early
+//     if (redisSuggestions.length + dbSuggestions.length >= 5) {
+//       return res.json({
+//         suggestions: [
+//           ...new Set([...redisSuggestions, ...dbSuggestions]),
+//         ].slice(0, 10),
+//       });
+//     }
 
-    // AI fallback
-    let aiSuggestions = [];
-    if (keyword.length > 3) {
-      const aiResult = await generateText(`
-        Generate related travel package keywords for: "${keyword}".
-        Return ONLY 8 comma separated keywords.
-      `);
+//     // AI fallback
+//     let aiSuggestions = [];
+//     if (keyword.length > 3) {
+//       const aiResult = await generateText(`
+//         Generate related travel package keywords for: "${keyword}".
+//         Return ONLY 8 comma separated keywords.
+//       `);
 
-      aiSuggestions = aiResult
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
-    }
+//       aiSuggestions = aiResult
+//         .split(",")
+//         .map((v) => v.trim())
+//         .filter(Boolean);
+//     }
 
-    const finalSuggestions = [
-      ...new Set([...redisSuggestions, ...dbSuggestions, ...aiSuggestions]),
-    ];
+//     const finalSuggestions = [
+//       ...new Set([...redisSuggestions, ...dbSuggestions, ...aiSuggestions]),
+//     ];
 
-    return res.json({ suggestions: finalSuggestions.slice(0, 10) });
-  } catch (err) {
-    console.error("Suggestion error:", err.message);
-    res.json({ suggestions: [] });
-  }
-};
+//     return res.json({ suggestions: finalSuggestions.slice(0, 10) });
+//   } catch (err) {
+//     console.error("Suggestion error:", err.message);
+//     res.json({ suggestions: [] });
+//   }
+// };
 
-export const searchKeywordController = async (req, res) => {
-  try {
-    const { keyword } = req.query;
-    if (!keyword) return res.status(400).json({ message: "Keyword required" });
+// export const searchKeywordController = async (req, res) => {
+//   try {
+//     const { keyword } = req.query;
+//     if (!keyword) return res.status(400).json({ message: "Keyword required" });
 
-    // save keyword for suggestions
-    await saveKeyword(keyword);
+//     // save keyword for suggestions
+//     await saveKeyword(keyword);
 
-    // redis suggestions
-    const redisSuggestions = await getKeywordSuggestions(keyword);
+//     // redis suggestions
+//     const redisSuggestions = await getKeywordSuggestions(keyword);
 
-    // AI keyword expansion (spell + semantic)
-    const aiResult = await generateText(`${keyword}`);
-    const parsedAi = aiResult
-      .replace(/\*/g, "")
-      .replace(/\n/g, "")
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
+//     // AI keyword expansion (spell + semantic)
+//     const aiResult = await generateText(`${keyword}`);
+//     const parsedAi = aiResult
+//       .replace(/\*/g, "")
+//       .replace(/\n/g, "")
+//       .split(",")
+//       .map((v) => v.trim())
+//       .filter(Boolean);
 
-    const mainKeyword = parsedAi[0] || keyword;
-    const regex = new RegExp(mainKeyword, "i");
+//     const mainKeyword = parsedAi[0] || keyword;
+//     const regex = new RegExp(mainKeyword, "i");
 
-    // Mongo Aggregation
-    const results = await travelPackageModel.aggregate([
-      { $unwind: "$Packages" },
+//     // Mongo Aggregation
+//     const results = await travelPackageModel.aggregate([
+//       { $unwind: "$Packages" },
 
-      { $match: { "Packages.isActive": true } },
+//       { $match: { "Packages.isActive": true } },
 
-      {
-        $match: {
-          $or: [
-            { tripCategory: regex },
-            { "Packages.title": regex },
-            { "Packages.location": regex },
-            { "Packages.subTripCategory.main": regex },
-            { "Packages.features": regex },
-            { "Packages.overviewCategory.overview": regex },
-            { "Packages.overviewCategory.summary": regex },
-            { "Packages.overviewCategory.itinerary.title": regex },
-            {
-              "Packages.overviewCategory.itinerary.description": regex,
-            },
-          ],
-        },
-      },
+//       {
+//         $match: {
+//           $or: [
+//             { tripCategory: regex },
+//             { "Packages.title": regex },
+//             { "Packages.location": regex },
+//             { "Packages.subTripCategory.main": regex },
+//             { "Packages.features": regex },
+//             { "Packages.overviewCategory.overview": regex },
+//             { "Packages.overviewCategory.summary": regex },
+//             { "Packages.overviewCategory.itinerary.title": regex },
+//             {
+//               "Packages.overviewCategory.itinerary.description": regex,
+//             },
+//           ],
+//         },
+//       },
 
-      {
-        $project: {
-          tripCategory: 1,
-          Packages: 1,
-        },
-      },
+//       {
+//         $project: {
+//           tripCategory: 1,
+//           Packages: 1,
+//         },
+//       },
 
-      { $limit: 50 },
-    ]);
+//       { $limit: 50 },
+//     ]);
 
-    res.json({
-      entered: keyword,
-      aiSuggestions: parsedAi,
-      redisSuggestions,
-      searchKeywordUsed: mainKeyword,
-      count: results.length,
-      data: results,
-    });
-  } catch (err) {
-    console.error("Search error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
+//     res.json({
+//       entered: keyword,
+//       aiSuggestions: parsedAi,
+//       redisSuggestions,
+//       searchKeywordUsed: mainKeyword,
+//       count: results.length,
+//       data: results,
+//     });
+//   } catch (err) {
+//     console.error("Search error:", err);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
