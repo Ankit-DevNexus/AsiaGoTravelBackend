@@ -1,4 +1,8 @@
 import travelPackageModel from "../models/travelPackageModels.js";
+import {
+  getKeywordSuggestions,
+  saveKeyword,
+} from "../services/redisServices.js";
 
 export const filterTravelPackages = async (req, res) => {
   try {
@@ -121,82 +125,145 @@ export const filterTravelPackages = async (req, res) => {
   }
 };
 
-// import travelPackageModel from "../models/travelPackageModels.js";
+export const suggestionController = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    if (!keyword) return res.json({ suggestions: [] });
 
-// export const filterTravelPackages = async (req, res) => {
-//   try {
-//     const {
-//       search,
-//       minBudget,
-//       maxBudget,
-//       minNights,
-//       maxNights,
-//       type,
-//       rating,
-//       famousDestinations, // array
-//     } = req.query;
+    //  Redis (fastest)
+    const redisSuggestions = await getKeywordSuggestions(keyword);
+    if (redisSuggestions.length >= 5) {
+      return res.json({ suggestions: redisSuggestions.slice(0, 10) });
+    }
 
-//     let filters = { isActive: true };
+    const regex = new RegExp(`^${keyword}`, "i");
 
-//     //  TEXT SEARCH (title, location, destination)
-//     if (search) {
-//       filters.$or = [
-//         { title: { $regex: search, $options: "i" } },
-//         { location: { $regex: search, $options: "i" } },
-//         { "searchDetails.destination": { $regex: search, $options: "i" } },
-//       ];
-//     }
+    // Mongo suggestions from travel packages
+    const dbResults = await travelPackageModel.aggregate([
+      { $unwind: "$Packages" },
+      {
+        $match: {
+          $or: [
+            { "Packages.title": regex },
+            { "Packages.location": regex },
+            { "Packages.subTripCategory.main": regex },
+            { "Packages.features": regex },
+          ],
+        },
+      },
+      {
+        $project: {
+          suggestion: {
+            $ifNull: ["$Packages.title", "$Packages.location"],
+          },
+        },
+      },
+      { $limit: 10 },
+    ]);
 
-//     //  BUDGET FILTER (price field OR budget.min/max)
-//     if (minBudget || maxBudget) {
-//       filters.price = {
-//         $gte: Number(minBudget) || 0,
-//         $lte: Number(maxBudget) || 9999999,
-//       };
-//     }
+    const dbSuggestions = dbResults.map((r) => r.suggestion);
 
-//     // Duration (Nights)
-//     if (minNights || maxNights) {
-//       filters["tripDuration.nights"] = {
-//         $gte: Number(minNights) || 0,
-//         $lte: Number(maxNights) || 100,
-//       };
-//     }
+    // enough results? stop early
+    if (redisSuggestions.length + dbSuggestions.length >= 5) {
+      return res.json({
+        suggestions: [
+          ...new Set([...redisSuggestions, ...dbSuggestions]),
+        ].slice(0, 10),
+      });
+    }
 
-//     // TYPE FILTER (tripCategory.main)
-//     if (type) {
-//       const arr = Array.isArray(type) ? type : [type];
-//       filters["tripCategory.main"] = { $in: arr };
-//     }
+    // AI fallback
+    let aiSuggestions = [];
+    if (keyword.length > 3) {
+      const aiResult = await generateText(`
+        Generate related travel package keywords for: "${keyword}".
+        Return ONLY 8 comma separated keywords.
+      `);
 
-//     // Rating
-//     if (rating) {
-//       const arr = Array.isArray(rating) ? rating : [rating];
-//       filters.rating = { $in: arr.map(Number) };
-//     }
+      aiSuggestions = aiResult
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+    }
 
-//     // Famous Destinations
-//     if (famousDestinations) {
-//       const arr = Array.isArray(famousDestinations)
-//         ? famousDestinations
-//         : [famousDestinations];
+    const finalSuggestions = [
+      ...new Set([...redisSuggestions, ...dbSuggestions, ...aiSuggestions]),
+    ];
 
-//       filters.famousDestinations = { $in: arr };
-//     }
+    return res.json({ suggestions: finalSuggestions.slice(0, 10) });
+  } catch (err) {
+    console.error("Suggestion error:", err.message);
+    res.json({ suggestions: [] });
+  }
+};
 
-//     // Fetch results
-//     const results = await travelPackageModel.find(filters).sort({ price: 1 });
+export const searchKeywordController = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    if (!keyword) return res.status(400).json({ message: "Keyword required" });
 
-//     return res.json({
-//       success: true,
-//       count: results.length,
-//       data: results,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Error applying filters",
-//       error: error.message,
-//     });
-//   }
-// };
+    // save keyword for suggestions
+    await saveKeyword(keyword);
+
+    // redis suggestions
+    const redisSuggestions = await getKeywordSuggestions(keyword);
+
+    // AI keyword expansion (spell + semantic)
+    const aiResult = await generateText(`${keyword}`);
+    const parsedAi = aiResult
+      .replace(/\*/g, "")
+      .replace(/\n/g, "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    const mainKeyword = parsedAi[0] || keyword;
+    const regex = new RegExp(mainKeyword, "i");
+
+    // Mongo Aggregation
+    const results = await travelPackageModel.aggregate([
+      { $unwind: "$Packages" },
+
+      { $match: { "Packages.isActive": true } },
+
+      {
+        $match: {
+          $or: [
+            { tripCategory: regex },
+            { "Packages.title": regex },
+            { "Packages.location": regex },
+            { "Packages.subTripCategory.main": regex },
+            { "Packages.features": regex },
+            { "Packages.overviewCategory.overview": regex },
+            { "Packages.overviewCategory.summary": regex },
+            { "Packages.overviewCategory.itinerary.title": regex },
+            {
+              "Packages.overviewCategory.itinerary.description": regex,
+            },
+          ],
+        },
+      },
+
+      {
+        $project: {
+          tripCategory: 1,
+          Packages: 1,
+        },
+      },
+
+      { $limit: 50 },
+    ]);
+
+    res.json({
+      entered: keyword,
+      aiSuggestions: parsedAi,
+      redisSuggestions,
+      searchKeywordUsed: mainKeyword,
+      count: results.length,
+      data: results,
+    });
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
