@@ -2,7 +2,12 @@
 import { createClient } from "redis";
 
 const redisUrl =
-  `redis://${process.env.REDIS_HOST}:6379` || "redis://127.0.0.1:6379";
+  process.env.REDIS_URL ||
+  (process.env.REDIS_HOST
+    ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
+    : DEFAULT_REDIS_URL);
+
+console.log("Using Redis URL:", redisUrl);
 
 // Create a Redis Client
 const redisClient = createClient({ url: redisUrl });

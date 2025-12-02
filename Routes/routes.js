@@ -131,7 +131,7 @@ router.get(
   suggestionController
 );
 // save keyword to DB
-router.post("/saveKeyword", protect, saveKeywordController);
+router.post("/saveKeyword", saveKeywordController);
 router.get("/saveKeyword", getAllKeyword);
 
 export default router;
