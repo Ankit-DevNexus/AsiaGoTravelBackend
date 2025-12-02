@@ -34,11 +34,11 @@ import {
 import { protect } from "../middleware/authMiddleware.js";
 import { filterTravelPackages } from "../controllers/searchController.js";
 
-// import {
-//   searchKeywordController,
-//   suggestionController,
-// } from "../controllers/searchController.js";
-// import { saveKeywordController } from "../controllers/savekeywordController.js";
+import { suggestionController } from "../controllers/searchController.js";
+import {
+  getAllKeyword,
+  saveKeywordController,
+} from "../controllers/savekeywordController.js";
 
 const router = express.Router();
 
@@ -125,9 +125,13 @@ router.post("/reset-password/:token", resetPassword);
 // --------------------------- Search  ----------------------------
 router.get("/travel/filter", filterTravelPackages);
 
-// router.get("/suggestions", protect, suggestionController);
-// router.get("/resume", protect, searchKeywordController);
-// // save keyword to DB
-// router.post("/saveKeyword", protect, saveKeywordController);
+router.get(
+  "/suggestions",
+  // protect,
+  suggestionController
+);
+// save keyword to DB
+router.post("/saveKeyword", protect, saveKeywordController);
+router.get("/saveKeyword", getAllKeyword);
 
 export default router;
