@@ -39,6 +39,7 @@ import {
   getAllKeyword,
   saveKeywordController,
 } from "../controllers/savekeywordController.js";
+import { locationCacheController } from "../controllers/locationCacheController.js";
 
 const router = express.Router();
 
@@ -133,5 +134,10 @@ router.get(
 // save keyword to DB
 router.post("/saveKeyword", saveKeywordController);
 router.get("/saveKeyword", getAllKeyword);
+
+
+// location cache
+
+router.get("/location/search", locationCacheController);
 
 export default router;
