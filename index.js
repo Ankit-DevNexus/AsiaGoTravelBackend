@@ -61,7 +61,6 @@ app.get("/", (req, res) => {
 });
 
 // mongodb connection
-
 mongoose
   .connect(uri)
   .then(() => {
