@@ -7,7 +7,7 @@ const redisUrl =
     ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
     : DEFAULT_REDIS_URL);
 
-console.log("Using Redis URL:", redisUrl);
+// console.log("Using Redis URL:", redisUrl);
 
 // Create a Redis Client
 const redisClient = createClient({ url: redisUrl });
