@@ -137,7 +137,6 @@ router.get("/saveKeyword", getAllKeyword);
 
 
 // location cache
-
 router.get("/location/search", locationCacheController);
 
 export default router;
