@@ -129,18 +129,27 @@ export const filterTravelPackages = async (req, res) => {
 export const suggestionController = async (req, res) => {
   try {
     const { keyword } = req.query;
-    if (!keyword) return res.json({ suggestions: [] });
+    if (!keyword || !keyword.trim()) {
+      return res.json({ suggestions: [] });
+    }
 
-    //  Redis (fastest)
-    const redisSuggestions = await getKeywordSuggestions(keyword);
+    const cleanedKeyword = keyword.trim();
+
+    // Save keyword for analytics/autocomplete (non-blocking)
+    saveKeyword(cleanedKeyword).catch((e) =>
+      console.error("Error saving keyword (non-blocking):", e.message)
+    );
+
+    // 1) Redis suggestions (fastest)
+    const redisSuggestions = await getKeywordSuggestions(cleanedKeyword);
 
     if (redisSuggestions.length >= 5) {
       return res.json({ suggestions: redisSuggestions.slice(0, 10) });
     }
 
-    const regex = new RegExp(`^${keyword}`, "i");
+    // 2) MongoDB suggestions from travel packages
+    const regex = new RegExp(`^${cleanedKeyword}`, "i");
 
-    // Mongo suggestions from travel packages
     const dbResults = await travelPackageModel.aggregate([
       { $unwind: "$Packages" },
       {
@@ -160,42 +169,48 @@ export const suggestionController = async (req, res) => {
           },
         },
       },
-      { $limit: 10 },
+      { $limit: 20 },
     ]);
 
-    const dbSuggestions = dbResults.map((r) => r.suggestion);
+    const dbSuggestions = dbResults.map((r) => r.suggestion).filter(Boolean);
 
-    // enough results? stop early
+    // 3) If Redis + DB already enough, return early
     if (redisSuggestions.length + dbSuggestions.length >= 5) {
-      return res.json({
-        suggestions: [
-          ...new Set([...redisSuggestions, ...dbSuggestions]),
-        ].slice(0, 10),
-      });
+      const combined = [
+        ...new Set([...redisSuggestions, ...dbSuggestions]),
+      ].slice(0, 10);
+
+      return res.json({ suggestions: combined });
     }
 
-    // AI fallback
+    // 4) AI fallback (Ollama) – PRODUCTION SAFE
     let aiSuggestions = [];
-    if (keyword.length > 3) {
-      const aiResult = await generateText(`
-      Generate 8 SEO-friendly travel package keywords related to: "${keyword}".
+    if (cleanedKeyword.length > 3) {
+      const prompt = `
+        Generate 8 SEO-friendly travel package keywords related to: "${cleanedKeyword}".
 
-      Rules:
-      - Output ONLY the keywords
-      - Comma-separated
-      - No numbering
-      - No explanations
-      - No extra text
-      - No quotes
+        Rules:
+        - Output ONLY the keywords
+        - Comma-separated
+        - No numbering
+        - No explanations
+        - No extra text
+        - No quotes
 
-      Example format:
-      keyword1, keyword2, keyword3, keyword4, keyword5, keyword6, keyword7, keyword8
-      `);
+        Example format:
+        keyword1, keyword2, keyword3, keyword4, keyword5, keyword6, keyword7, keyword8
+      `.trim();
 
-      aiSuggestions = aiResult
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
+      const aiResult = await generateText(prompt);
+
+      if (typeof aiResult === "string" && aiResult.trim()) {
+        aiSuggestions = aiResult
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+      } else {
+        console.warn("AI suggestions skipped. Invalid aiResult:", aiResult);
+      }
     }
 
     const finalSuggestions = [
@@ -204,7 +219,98 @@ export const suggestionController = async (req, res) => {
 
     return res.json({ suggestions: finalSuggestions.slice(0, 10) });
   } catch (err) {
-    console.error("Suggestion error:", err.message);
+    console.error("Suggestion error:", err);
+    // Don't crash the server – just return empty suggestions
     res.json({ suggestions: [] });
   }
 };
+
+// export const suggestionController = async (req, res) => {
+//   try {
+//     const { keyword } = req.query;
+//     if (!keyword) return res.json({ suggestions: [] });
+
+//     const cleanedKeyword = keyword.trim();
+
+//     // Save keyword for analytics/autocomplete (non-blocking)
+//     saveKeyword(cleanedKeyword).catch((e) =>
+//       console.error("Error saving keyword (non-blocking):", e.message)
+//     );
+
+//     //  Redis (fastest)
+//     const redisSuggestions = await getKeywordSuggestions(keyword);
+
+//     if (redisSuggestions.length >= 5) {
+//       return res.json({ suggestions: redisSuggestions.slice(0, 10) });
+//     }
+
+//     const regex = new RegExp(`^${keyword}`, "i");
+
+//     // Mongo suggestions from travel packages
+//     const dbResults = await travelPackageModel.aggregate([
+//       { $unwind: "$Packages" },
+//       {
+//         $match: {
+//           $or: [
+//             { "Packages.title": regex },
+//             { "Packages.location": regex },
+//             { "Packages.subTripCategory.main": regex },
+//             { "Packages.features": regex },
+//           ],
+//         },
+//       },
+//       {
+//         $project: {
+//           suggestion: {
+//             $ifNull: ["$Packages.title", "$Packages.location"],
+//           },
+//         },
+//       },
+//       { $limit: 10 },
+//     ]);
+
+//     const dbSuggestions = dbResults.map((r) => r.suggestion);
+
+//     // enough results? stop early
+//     if (redisSuggestions.length + dbSuggestions.length >= 5) {
+//       return res.json({
+//         suggestions: [
+//           ...new Set([...redisSuggestions, ...dbSuggestions]),
+//         ].slice(0, 10),
+//       });
+//     }
+
+//     // AI fallback
+//     let aiSuggestions = [];
+//     if (keyword.length > 3) {
+//       const aiResult = await generateText(`
+//       Generate 8 SEO-friendly travel package keywords related to: "${keyword}".
+
+//       Rules:
+//       - Output ONLY the keywords
+//       - Comma-separated
+//       - No numbering
+//       - No explanations
+//       - No extra text
+//       - No quotes
+
+//       Example format:
+//       keyword1, keyword2, keyword3, keyword4, keyword5, keyword6, keyword7, keyword8
+//       `);
+
+//       aiSuggestions = aiResult
+//         .split(",")
+//         .map((v) => v.trim())
+//         .filter(Boolean);
+//     }
+
+//     const finalSuggestions = [
+//       ...new Set([...redisSuggestions, ...dbSuggestions, ...aiSuggestions]),
+//     ];
+
+//     return res.json({ suggestions: finalSuggestions.slice(0, 10) });
+//   } catch (err) {
+//     console.error("Suggestion error:", err.message);
+//     res.json({ suggestions: [] });
+//   }
+// };

@@ -64,7 +64,7 @@ const subCategorySchema = new mongoose.Schema({
       "bachelorTours",
       "luxuryTours",
       "premiumHolidayPackage",
-      "personalizdTours",
+      "personalizedTours",
     ],
   },
 });
