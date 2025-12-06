@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 import Routes from "./routes/routes.js";
 import bodyParser from "body-parser";
 
-const PORT = process.env.PORT || 3030;
+const PORT = process.env.PORT || 9002;
 const uri = process.env.MONGO_URL;
 
 const app = express();
@@ -65,7 +65,7 @@ mongoose
   .connect(uri)
   .then(() => {
     console.log("DB Connected Successfully");
-    app.listen(PORT, "0.0.0.0", () => {
+    app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
