@@ -40,6 +40,19 @@ import { filterTravelPackages } from "../controllers/searchController.js";
 //   saveKeywordController,
 // } from "../controllers/savekeywordController.js";
 import { locationCacheController } from "../controllers/locationCacheController.js";
+import {
+  deleteJoinedTeamRecord,
+  getJoinedTeamRecordById,
+  getJoinedTeamRecords,
+  JoinOurTeam,
+} from "../controllers/careerPageControllers.js";
+import {
+  createJob,
+  deleteJob,
+  getAllJobs,
+  getJobById,
+  updateJob,
+} from "../controllers/jobControllers.js";
 
 const router = express.Router();
 
@@ -135,8 +148,30 @@ router.get("/travel/filter", filterTravelPackages);
 // router.post("/saveKeyword", saveKeywordController);
 // router.get("/saveKeyword", getAllKeyword);
 
-
 // location cache
 router.get("/location/search", locationCacheController);
+
+// ---------------------------career page----------------------------
+
+router
+  .route("/jointeam")
+  .post(upload.single("cvFile"), JoinOurTeam)
+  .get(getJoinedTeamRecords);
+
+router
+  .route("/jointeam/:id")
+  .get(getJoinedTeamRecordById)
+  .delete(deleteJoinedTeamRecord);
+
+router.route("/jobs").get(getAllJobs).post(createJob); // add your auth middleware here
+// .post(authMiddleware, isAdmin, createJob);
+
+router
+  .route("/jobs/:id")
+  .get(getJobById)
+  // .put(authMiddleware, isAdmin, updateJob)
+  // .delete(authMiddleware, isAdmin, deleteJob);
+  .put(updateJob)
+  .delete(deleteJob);
 
 export default router;
