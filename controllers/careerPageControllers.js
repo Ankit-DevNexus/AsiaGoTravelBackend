@@ -4,6 +4,7 @@ import {
   uploadOnCloudinary,
   deleteFromCloudinary,
 } from "../utils/cloudinary.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 const JoinOurTeam = async (req, res) => {
   try {
@@ -24,7 +25,7 @@ const JoinOurTeam = async (req, res) => {
       });
     }
 
-    console.log(cvFile);
+    // console.log(cvFile);
 
     var response = await uploadOnCloudinary(cvFile.path);
 
@@ -50,6 +51,21 @@ const JoinOurTeam = async (req, res) => {
         success: false,
       });
     }
+
+    const html = `
+      <p>Hello ${Name},</p>
+
+      <p>Thank you for applying for the <strong>${Position}</strong> position at <strong>AsiaGo Travel</strong>.</p>
+
+      <p>We have successfully received your application along with your CV. Our team will carefully review your profile, and if your qualifications match our requirements, we will contact you for the next steps.</p>
+
+      <p>We appreciate your interest in joining our team.</p>
+
+      <p>Best Regards,<br/>
+      Your Company Name</p>
+    `;
+
+    await sendEmail(Email, "Job Application", html);
 
     return res.status(201).json({
       message: "Response submitted",
@@ -128,7 +144,7 @@ const getJoinedTeamRecordById = async (req, res) => {
 
 const getJoinedTeamRecords = async (_, res) => {
   try {
-    const records = await joinTeamModel.find({});
+    const records = await joinTeamModel.find().sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
