@@ -18,13 +18,7 @@ const jobSchema = new Schema(
     },
 
     employmentTypes: {
-      type: [String],
-      // enum: ["FULL_TIME", "PART_TIME"],
-      required: true,
-      validate: {
-        validator: (val) => Array.isArray(val) && val.length > 0,
-        message: "At least one employment type is required",
-      },
+      type: String
     },
 
     isActive: {

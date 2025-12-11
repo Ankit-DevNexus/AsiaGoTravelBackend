@@ -178,7 +178,7 @@ router.get("/location/search", locationCacheController);
 
 // Join Team Routes
 
-router.post("/jointeam", upload.single("cvFile"), JoinOurTeam);
+router.post("/jointeam", upload.single("cvFile"),  JoinOurTeam);
 router.get("/jointeam/all", getJoinedTeamRecords);
 
 router.get("/jointeam/:id", getJoinedTeamRecordById);
@@ -192,7 +192,7 @@ router.post("/jobs", createJob);
 router.get("/jobs/:id", getJobById);
 // router.put("/jobs/:id", authMiddleware, isAdmin, updateJob);
 // router.delete("/jobs/:id", authMiddleware, isAdmin, deleteJob);
-router.put("/jobs/update/:id", updateJob);
+router.patch("/jobs/update/:id", updateJob);
 router.delete("/jobs/delete/:id", deleteJob);
 
 export default router;
