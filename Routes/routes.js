@@ -153,25 +153,46 @@ router.get("/location/search", locationCacheController);
 
 // ---------------------------career page----------------------------
 
-router
-  .route("/jointeam")
-  .post(upload.single("cvFile"), JoinOurTeam)
-  .get(getJoinedTeamRecords);
+// router
+//   .route("/jointeam")
+//   .post(upload.single("cvFile"), JoinOurTeam)
+//   .get(getJoinedTeamRecords);
 
-router
-  .route("/jointeam/:id")
-  .get(getJoinedTeamRecordById)
-  .delete(deleteJoinedTeamRecord);
+// router
+//   .route("/jointeam/:id")
+//   .get(getJoinedTeamRecordById)
+//   .delete(deleteJoinedTeamRecord);
 
-router.route("/jobs").get(getAllJobs).post(createJob); // add your auth middleware here
-// .post(authMiddleware, isAdmin, createJob);
+// router.route("/jobs").get(getAllJobs).post(createJob); // add your auth middleware here
+// // .post(authMiddleware, isAdmin, createJob);
 
-router
-  .route("/jobs/:id")
-  .get(getJobById)
-  // .put(authMiddleware, isAdmin, updateJob)
-  // .delete(authMiddleware, isAdmin, deleteJob);
-  .put(updateJob)
-  .delete(deleteJob);
+// router
+//   .route("/jobs/:id")
+//   .get(getJobById)
+//   // .put(authMiddleware, isAdmin, updateJob)
+//   // .delete(authMiddleware, isAdmin, deleteJob);
+//   .put(updateJob)
+//   .delete(deleteJob);
+
+// ---------------------------career page----------------------------
+
+// Join Team Routes
+
+router.post("/jointeam", upload.single("cvFile"), JoinOurTeam);
+router.get("/jointeam/all", getJoinedTeamRecords);
+
+router.get("/jointeam/:id", getJoinedTeamRecordById);
+router.delete("/jointeam/delete/:id", deleteJoinedTeamRecord);
+
+// Job Routes
+// router.post("/jobs", authMiddleware, isAdmin, createJob); // with auth
+router.get("/jobs/all", getAllJobs);
+router.post("/jobs", createJob);
+
+router.get("/jobs/:id", getJobById);
+// router.put("/jobs/:id", authMiddleware, isAdmin, updateJob);
+// router.delete("/jobs/:id", authMiddleware, isAdmin, deleteJob);
+router.put("/jobs/update/:id", updateJob);
+router.delete("/jobs/delete/:id", deleteJob);
 
 export default router;
