@@ -57,15 +57,9 @@ const JoinOurTeam = async (req, res) => {
       response: joinTeamEntry,
     });
   } catch (error) {
-    if (response.public_id) {
+    if (response?.public_id) {
       await deleteFromCloudinary(response.public_id);
     }
-
-    return res.status(500).json({
-      message: error.message,
-      error,
-      success: false,
-    });
   }
 };
 

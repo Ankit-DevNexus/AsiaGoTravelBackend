@@ -15,12 +15,12 @@ export const createJob = async (req, res) => {
       });
     }
 
-    if (!Array.isArray(employmentTypes) || employmentTypes.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "employmentTypes must be a non-empty array",
-      });
-    }
+    // if (!Array.isArray(employmentTypes) || employmentTypes.length === 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "employmentTypes must be a non-empty array",
+    //   });
+    // }
 
     const job = await Job.create({
       title,
@@ -105,7 +105,7 @@ export const getJobById = async (req, res) => {
   }
 };
 
-// UPDATE – PUT /api/jobs/:id
+// patch 
 export const updateJob = async (req, res) => {
   try {
     const { id } = req.params;
@@ -119,28 +119,31 @@ export const updateJob = async (req, res) => {
 
     const { title, description, employmentTypes, isActive } = req.body;
 
+    // Update only changed fields
     const updateData = {};
 
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
+    if (title !== undefined && title !== "") updateData.title = title;
+    if (description !== undefined && description !== "") updateData.description = description;
     if (isActive !== undefined) updateData.isActive = isActive;
 
+    // employmentTypes should store a STRING (not array)
     if (employmentTypes !== undefined) {
-      if (!Array.isArray(employmentTypes) || employmentTypes.length === 0) {
+      if (typeof employmentTypes !== "string" || employmentTypes.trim() === "") {
         return res.status(400).json({
           success: false,
-          message: "employmentTypes must be a non-empty array",
+          message: "employmentTypes must be a non-empty string",
         });
       }
-      updateData.employmentTypes = employmentTypes;
+
+      updateData.employmentTypes = employmentTypes.trim();
     }
 
-    const job = await Job.findByIdAndUpdate(id, updateData, {
+    const updatedJob = await Job.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
 
-    if (!job) {
+    if (!updatedJob) {
       return res.status(404).json({
         success: false,
         message: "Job not found",
@@ -150,7 +153,7 @@ export const updateJob = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Job updated successfully",
-      job,
+      job: updatedJob,
     });
   } catch (error) {
     console.error("updateJob error:", error);
@@ -161,6 +164,7 @@ export const updateJob = async (req, res) => {
     });
   }
 };
+
 
 // DELETE – DELETE /api/jobs/:id
 export const deleteJob = async (req, res) => {
