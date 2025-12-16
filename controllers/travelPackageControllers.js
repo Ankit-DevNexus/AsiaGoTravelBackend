@@ -7,6 +7,499 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 
+
+
+export const createTravelPackage = async (req, res) => {
+  try {
+    const { tripCategory, Packages } = req.body;
+    console.log("FILES:", req.files);
+    console.log("BODY:", req.body);
+
+    if (!tripCategory) {
+      return res.status(400).json({
+        success: false,
+        message: "tripCategory is required",
+      });
+    }
+
+    if (!Packages) {
+      return res.status(400).json({
+        success: false,
+        message: "Packages is required",
+      });
+    }
+
+    //  Parse Packages
+    let parsedPackages;
+    try {
+      parsedPackages =
+        typeof Packages === "string" ? JSON.parse(Packages) : Packages;
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Packages JSON format",
+      });
+    }
+
+    const pkg = parsedPackages[0];
+
+      //  Upload Overview Images
+    let uploadedOverviewImages = [];
+
+    if (req.files?.overviewImages?.length) {
+      for (const file of req.files.overviewImages) {
+        const result = await uploadOnCloudinary(file.path);
+
+        if (result?.secure_url && result?.public_id) {
+          uploadedOverviewImages.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
+        }
+      }
+    }
+
+    //  Upload Icons
+    let uploadedIcons = [];
+
+    if (req.files?.icons?.length) {
+      for (let i = 0; i < req.files.icons.length; i++) {
+        const file = req.files.icons[i];
+        const iconMeta = pkg.icons?.[i];
+
+        const result = await uploadOnCloudinary(file.path);
+
+        if (result?.secure_url && result?.public_id) {
+          uploadedIcons.push({
+            name: iconMeta?.name || file.originalname,
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
+        }
+      }
+    }
+
+      //  Prepare Package Object
+    const newPackage = {
+      subTripCategory: pkg.subTripCategory,
+      title: pkg.title,
+      location: pkg.location,
+      tripDuration: pkg.tripDuration,
+
+      overviewCategory: [
+        {
+          images: uploadedOverviewImages,
+          overview: pkg.overviewCategory?.[0]?.overview,
+          itinerary: pkg.overviewCategory?.[0]?.itinerary || [],
+          inclusions: pkg.overviewCategory?.[0]?.inclusions || [],
+          exclusions: pkg.overviewCategory?.[0]?.exclusions || [],
+          summary: pkg.overviewCategory?.[0]?.summary || [],
+        },
+      ],
+
+      priceDetails: pkg.priceDetails || [],
+      rating: pkg.rating ?? 4.8,
+      features: pkg.features || [],
+      icons: uploadedIcons,
+      isActive: pkg.isActive ?? true,
+    };
+
+    
+    //  Save to MongoDB
+    let category = await travelPackageModel.findOne({ tripCategory });
+
+    if (!category) {
+      category = await travelPackageModel.create({
+        tripCategory,
+        Packages: [newPackage],
+      });
+    } else {
+      category.Packages.push(newPackage);
+      await category.save();
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Travel package created successfully",
+      data: newPackage,
+    });
+  } catch (error) {
+    console.error("Create package error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// GET ALL PACKAGES
+export const getAllTravelPackages = async (req, res) => {
+  try {
+    const categories = await travelPackageModel.aggregate([
+      { $sort: { createdAt: -1 } }, // sort categories
+
+      {
+        $addFields: {
+          Packages: {
+            $sortArray: {
+              input: "$Packages",
+              sortBy: { createdAt: -1 }, // sort packages
+            },
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories,
+    });
+  } catch (error) {
+    console.error("Get All Packages Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET PACKAGE BY ID
+export const getAllTravelPackageById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await travelPackageModel.findOne({
+      "Packages._id": id,
+    });
+
+    if (!category) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Package not found" });
+    }
+
+    const travelPackage = category.Packages.find(
+      (pkg) => pkg._id.toString() === id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: travelPackage,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ----------------------------------------------------------------------------
+// export const updateTravelPackage = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const setObj = {};
+
+//     /* ================= FETCH EXISTING PACKAGE ================= */
+//     const parentDoc = await travelPackageModel.findOne({
+//       "Packages._id": id,
+//     });
+
+//     if (!parentDoc) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Package not found" });
+//     }
+
+//     const existingPackage = parentDoc.Packages.find(
+//       (pkg) => pkg._id.toString() === id
+//     );
+
+//     /* ================= BASIC INFO ================= */
+//     if (req.body.title) setObj["Packages.$.title"] = req.body.title;
+
+//     if (req.body.location) setObj["Packages.$.location"] = req.body.location;
+
+//     if (req.body.rating) setObj["Packages.$.rating"] = Number(req.body.rating);
+
+//     if (req.body.subTripCategoryMain)
+//       setObj["Packages.$.subTripCategory.main"] = req.body.subTripCategoryMain;
+
+//     if (req.body.days)
+//       setObj["Packages.$.tripDuration.days"] = Number(req.body.days);
+
+//     if (req.body.nights)
+//       setObj["Packages.$.tripDuration.nights"] = Number(req.body.nights);
+
+//     if (req.body.features)
+//       setObj["Packages.$.features"] = JSON.parse(req.body.features);
+
+//     if (req.body.priceDetails)
+//       setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
+
+//     /* ================= OVERVIEW TEXT ================= */
+//     if (req.body.overviewCategory && !req.files?.overviewImages?.length) {
+//       setObj["Packages.$.overviewCategory"] = JSON.parse(
+//         req.body.overviewCategory
+//       );
+//     }
+
+//         /* ================= OVERVIEW CATEGORY ================= */
+//     let parsedOverviewCategory = null;
+
+//     if (req.body.overviewCategory) {
+//       parsedOverviewCategory = JSON.parse(req.body.overviewCategory);
+//     } else {
+//       parsedOverviewCategory = existingPackage.overviewCategory;
+//     }
+
+
+//     /* ================= OVERVIEW IMAGES ================= */
+//     if (req.files?.overviewImages?.length) {
+//       // DELETE OLD IMAGES USING STORED publicId
+//       for (const img of existingPackage.overviewCategory?.[0]?.images || []) {
+//         if (img.publicId) {
+//           await deleteFromCloudinary(img.publicId);
+//         }
+//       }
+
+//       // UPLOAD NEW IMAGES
+//       const uploadedImages = [];
+
+//       for (const file of req.files.overviewImages) {
+//         const uploaded = await uploadOnCloudinary(file.path);
+
+//         if (uploaded?.secure_url && uploaded?.public_id) {
+//           uploadedImages.push({
+//             url: uploaded.secure_url,
+//             publicId: uploaded.public_id,
+//           });
+//         }
+//       }
+
+//       setObj["Packages.$.overviewCategory.0.images"] = uploadedImages;
+//     }
+
+//     /* ================= ICONS ================= */
+//     if (req.files?.icons?.length) {
+//       // DELETE OLD ICONS USING STORED publicId
+//       for (const icon of existingPackage.icons || []) {
+//         if (icon.publicId) {
+//           await deleteFromCloudinary(icon.publicId);
+//         }
+//       }
+
+//       // UPLOAD NEW ICONS
+//       const uploadedIcons = [];
+
+//       for (const file of req.files.icons) {
+//         const uploaded = await uploadOnCloudinary(file.path);
+
+//         if (uploaded?.secure_url && uploaded?.public_id) {
+//           uploadedIcons.push({
+//             name: file.originalname,
+//             url: uploaded.secure_url,
+//             publicId: uploaded.public_id,
+//           });
+//         }
+//       }
+
+//       setObj["Packages.$.icons"] = uploadedIcons;
+//     }
+
+//     /* ================= NO UPDATE CHECK ================= */
+//     if (Object.keys(setObj).length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "No valid updates",
+//       });
+//     }
+
+//     /* ================= UPDATE DB ================= */
+//     const updated = await travelPackageModel.findOneAndUpdate(
+//       { "Packages._id": id },
+//       { $set: setObj },
+//       { new: true }
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Package updated successfully",
+//       data: updated.Packages.find((p) => p._id.toString() === id),
+//     });
+//   } catch (error) {
+//     console.error("Update Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
+
+export const updateTravelPackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const setObj = {};
+
+    /* ================= FETCH EXISTING PACKAGE ================= */
+    const parentDoc = await travelPackageModel.findOne({
+      "Packages._id": id,
+    });
+
+    if (!parentDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Package not found",
+      });
+    }
+
+    const existingPackage = parentDoc.Packages.find(
+      (pkg) => pkg._id.toString() === id
+    );
+
+    /* ================= BASIC INFO ================= */
+    if (req.body.title) setObj["Packages.$.title"] = req.body.title;
+    if (req.body.location) setObj["Packages.$.location"] = req.body.location;
+    if (req.body.rating)
+      setObj["Packages.$.rating"] = Number(req.body.rating);
+
+    if (req.body.subTripCategoryMain)
+      setObj["Packages.$.subTripCategory.main"] =
+        req.body.subTripCategoryMain;
+
+    if (req.body.days)
+      setObj["Packages.$.tripDuration.days"] = Number(req.body.days);
+
+    if (req.body.nights)
+      setObj["Packages.$.tripDuration.nights"] = Number(req.body.nights);
+
+    if (req.body.features)
+      setObj["Packages.$.features"] = JSON.parse(req.body.features);
+
+    if (req.body.priceDetails)
+      setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
+
+    /* ================= OVERVIEW CATEGORY ================= */
+    let parsedOverviewCategory = null;
+
+    if (req.body.overviewCategory) {
+      parsedOverviewCategory = JSON.parse(req.body.overviewCategory);
+    } else {
+      parsedOverviewCategory = existingPackage.overviewCategory;
+    }
+
+    /* ================= OVERVIEW IMAGES ================= */
+    if (req.files?.overviewImages?.length) {
+      // Delete old images
+      for (const img of existingPackage.overviewCategory?.[0]?.images || []) {
+        if (img.publicId) {
+          await deleteFromCloudinary(img.publicId);
+        }
+      }
+
+      // Upload new images
+      const uploadedImages = [];
+
+      for (const file of req.files.overviewImages) {
+        const uploaded = await uploadOnCloudinary(file.path);
+
+        if (uploaded?.secure_url && uploaded?.public_id) {
+          uploadedImages.push({
+            url: uploaded.secure_url,
+            publicId: uploaded.public_id,
+          });
+        }
+      }
+
+      parsedOverviewCategory[0].images = uploadedImages;
+    }
+
+    // Set full overviewCategory
+    if (parsedOverviewCategory) {
+      setObj["Packages.$.overviewCategory"] = parsedOverviewCategory;
+    }
+
+    /* ================= ICONS ================= */
+    if (req.files?.icons?.length) {
+      // Delete old icons
+      for (const icon of existingPackage.icons || []) {
+        if (icon.publicId) {
+          await deleteFromCloudinary(icon.publicId);
+        }
+      }
+
+      const uploadedIcons = [];
+
+      for (const file of req.files.icons) {
+        const uploaded = await uploadOnCloudinary(file.path);
+
+        if (uploaded?.secure_url && uploaded?.public_id) {
+          uploadedIcons.push({
+            name: file.originalname,
+            url: uploaded.secure_url,
+            publicId: uploaded.public_id,
+          });
+        }
+      }
+
+      setObj["Packages.$.icons"] = uploadedIcons;
+    }
+
+    /* ================= NO UPDATE CHECK ================= */
+    if (!Object.keys(setObj).length) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid updates provided",
+      });
+    }
+
+    /* ================= UPDATE DB ================= */
+    const updatedDoc = await travelPackageModel.findOneAndUpdate(
+      { "Packages._id": id },
+      { $set: setObj },
+      { new: true }
+    );
+
+    const updatedPackage = updatedDoc.Packages.find(
+      (pkg) => pkg._id.toString() === id
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Package updated successfully",
+      data: updatedPackage,
+    });
+  } catch (error) {
+    console.error("Update Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const deleteTravelPackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await travelPackageModel.findOneAndUpdate(
+      { "Packages._id": id },
+      { $pull: { Packages: { _id: id } } },
+      { new: true }
+    );
+
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Package not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Travel package deleted successfully!",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
 // Helper function to safely parse JSON
 // const parseIfString = (value) => {
 //   try {
@@ -84,195 +577,125 @@ import {
 //   }
 // };
 
-export const createTravelPackage = async (req, res) => {
-  try {
-    const { tripCategory, Packages } = req.body;
-    console.log("FILES:", req.files);
-    console.log("BODY:", req.body);
 
-    if (!tripCategory) {
-      return res.status(400).json({
-        success: false,
-        message: "tripCategory is required",
-      });
-    }
 
-    if (!Packages) {
-      return res.status(400).json({
-        success: false,
-        message: "Packages is required",
-      });
-    }
+// export const updateTravelPackage = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const setObj = {};
 
-    /* ================================
-       Parse Packages
-    ================================= */
-    let parsedPackages;
-    try {
-      parsedPackages =
-        typeof Packages === "string" ? JSON.parse(Packages) : Packages;
-    } catch {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Packages JSON format",
-      });
-    }
+//     // Fetch existing package FIRST
+//     const parentDoc = await travelPackageModel.findOne({
+//       "Packages._id": id,
+//     });
 
-    const pkg = parsedPackages[0];
+//     if (!parentDoc) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Package not found" });
+//     }
 
-    /* ================================
-       Upload Overview Images
-    ================================= */
-    let uploadedOverviewImages = [];
+//     const existingPackage = parentDoc.Packages.find(
+//       (pkg) => pkg._id.toString() === id
+//     );
 
-    if (req.files?.overviewImages?.length) {
-      for (const file of req.files.overviewImages) {
-        const result = await uploadOnCloudinary(file.path);
+//     /* ================= BASIC INFO ================= */
+//     if (req.body.title) setObj["Packages.$.title"] = req.body.title;
 
-        if (result?.secure_url && result?.public_id) {
-          uploadedOverviewImages.push({
-            url: result.secure_url,
-            publicId: result.public_id,
-          });
-        }
-      }
-    }
+//     if (req.body.location) setObj["Packages.$.location"] = req.body.location;
 
-    /* ================================
-       Upload Icons
-    ================================= */
-    let uploadedIcons = [];
+//     if (req.body.rating) setObj["Packages.$.rating"] = Number(req.body.rating);
 
-    if (req.files?.icons?.length) {
-      for (let i = 0; i < req.files.icons.length; i++) {
-        const file = req.files.icons[i];
-        const iconMeta = pkg.icons?.[i];
+//     if (req.body.subTripCategoryMain)
+//       setObj["Packages.$.subTripCategory.main"] = req.body.subTripCategoryMain;
 
-        const result = await uploadOnCloudinary(file.path);
+//     if (req.body.days)
+//       setObj["Packages.$.tripDuration.days"] = Number(req.body.days);
 
-        if (result?.secure_url && result?.public_id) {
-          uploadedIcons.push({
-            name: iconMeta?.name || file.originalname,
-            url: result.secure_url,
-            publicId: result.public_id,
-          });
-        }
-      }
-    }
+//     if (req.body.nights)
+//       setObj["Packages.$.tripDuration.nights"] = Number(req.body.nights);
 
-    /* ================================
-       Prepare Package Object
-    ================================= */
-    const newPackage = {
-      subTripCategory: pkg.subTripCategory,
-      title: pkg.title,
-      location: pkg.location,
-      tripDuration: pkg.tripDuration,
+//     if (req.body.features)
+//       setObj["Packages.$.features"] = JSON.parse(req.body.features);
 
-      overviewCategory: [
-        {
-          images: uploadedOverviewImages,
-          overview: pkg.overviewCategory?.[0]?.overview,
-          itinerary: pkg.overviewCategory?.[0]?.itinerary || [],
-          inclusions: pkg.overviewCategory?.[0]?.inclusions || [],
-          exclusions: pkg.overviewCategory?.[0]?.exclusions || [],
-          summary: pkg.overviewCategory?.[0]?.summary || [],
-        },
-      ],
+//     if (req.body.priceDetails)
+//       setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
 
-      priceDetails: pkg.priceDetails || [],
-      rating: pkg.rating ?? 4.8,
-      features: pkg.features || [],
-      icons: uploadedIcons,
-      isActive: pkg.isActive ?? true,
-    };
+//     /* ================= OVERVIEW TEXT ================= */
+//     if (req.body.overviewCategory && !req.files?.overviewImages?.length) {
+//       setObj["Packages.$.overviewCategory"] = JSON.parse(
+//         req.body.overviewCategory
+//       );
+//     }
 
-    /* ================================
-       Save to MongoDB
-    ================================= */
-    let category = await travelPackageModel.findOne({ tripCategory });
+//     /* ================= OVERVIEW IMAGES ================= */
+//     if (req.files?.overviewImages?.length) {
+//       // 🔥 DELETE OLD OVERVIEW IMAGES
+//       existingPackage.overviewCategory?.[0]?.images?.forEach(async (url) => {
+//         const publicId = getPublicIdFromUrl(url);
+//         await deleteFromCloudinary(publicId);
+//       });
 
-    if (!category) {
-      category = await travelPackageModel.create({
-        tripCategory,
-        Packages: [newPackage],
-      });
-    } else {
-      category.Packages.push(newPackage);
-      await category.save();
-    }
+//       // ✅ UPLOAD NEW IMAGES
+//       const uploadedImages = [];
+//       for (const file of req.files.overviewImages) {
+//         const uploaded = await uploadOnCloudinary(file.path);
+//         if (uploaded?.secure_url) {
+//           uploadedImages.push(uploaded.secure_url);
+//         }
+//       }
 
-    return res.status(201).json({
-      success: true,
-      message: "Travel package created successfully",
-      data: newPackage,
-    });
-  } catch (error) {
-    console.error("Create package error:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+//       setObj["Packages.$.overviewCategory.0.images"] = uploadedImages;
+//     }
 
-// GET ALL PACKAGES
+//     /* ================= ICONS ================= */
+//     if (req.files?.icons?.length) {
+//       // 🔥 DELETE OLD ICONS
+//       existingPackage.icons?.forEach(async (icon) => {
+//         const publicId = getPublicIdFromUrl(icon.icon);
+//         await deleteFromCloudinary(publicId);
+//       });
 
-export const getAllTravelPackages = async (req, res) => {
-  try {
-    const categories = await travelPackageModel.aggregate([
-      { $sort: { createdAt: -1 } }, // sort categories
+//       // ✅ UPLOAD NEW ICONS
+//       const uploadedIcons = [];
+//       for (const file of req.files.icons) {
+//         const uploaded = await uploadOnCloudinary(file.path);
+//         if (uploaded?.secure_url) {
+//           uploadedIcons.push({
+//             name: file.originalname,
+//             icon: uploaded.secure_url,
+//           });
+//         }
+//       }
 
-      {
-        $addFields: {
-          Packages: {
-            $sortArray: {
-              input: "$Packages",
-              sortBy: { createdAt: -1 }, // sort packages
-            },
-          },
-        },
-      },
-    ]);
+//       setObj["Packages.$.icons"] = uploadedIcons;
+//     }
 
-    res.status(200).json({
-      success: true,
-      count: categories.length,
-      data: categories,
-    });
-  } catch (error) {
-    console.error("Get All Packages Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+//     if (Object.keys(setObj).length === 0) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "No valid updates" });
+//     }
 
-// GET PACKAGE BY ID
-export const getAllTravelPackageById = async (req, res) => {
-  try {
-    const { id } = req.params;
+//     const updated = await travelPackageModel.findOneAndUpdate(
+//       { "Packages._id": id },
+//       { $set: setObj },
+//       { new: true }
+//     );
 
-    const category = await travelPackageModel.findOne({
-      "Packages._id": id,
-    });
+//     res.status(200).json({
+//       success: true,
+//       message: "Package updated successfully",
+//       data: updated.Packages.find((p) => p._id.toString() === id),
+//     });
+//   } catch (error) {
+//     console.error("Update Error:", error);
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 
-    if (!category) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Package not found" });
-    }
 
-    const travelPackage = category.Packages.find(
-      (pkg) => pkg._id.toString() === id
-    );
 
-    res.status(200).json({
-      success: true,
-      data: travelPackage,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 // export const updateTravelPackage = async (req, res) => {
 //   try {
@@ -473,274 +896,3 @@ export const getAllTravelPackageById = async (req, res) => {
 //     });
 //   }
 // };
-// ----------------------------------------------------------------------------
-export const updateTravelPackage = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const setObj = {};
-
-    /* ================= FETCH EXISTING PACKAGE ================= */
-    const parentDoc = await travelPackageModel.findOne({
-      "Packages._id": id,
-    });
-
-    if (!parentDoc) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Package not found" });
-    }
-
-    const existingPackage = parentDoc.Packages.find(
-      (pkg) => pkg._id.toString() === id
-    );
-
-    /* ================= BASIC INFO ================= */
-    if (req.body.title) setObj["Packages.$.title"] = req.body.title;
-
-    if (req.body.location) setObj["Packages.$.location"] = req.body.location;
-
-    if (req.body.rating) setObj["Packages.$.rating"] = Number(req.body.rating);
-
-    if (req.body.subTripCategoryMain)
-      setObj["Packages.$.subTripCategory.main"] = req.body.subTripCategoryMain;
-
-    if (req.body.days)
-      setObj["Packages.$.tripDuration.days"] = Number(req.body.days);
-
-    if (req.body.nights)
-      setObj["Packages.$.tripDuration.nights"] = Number(req.body.nights);
-
-    if (req.body.features)
-      setObj["Packages.$.features"] = JSON.parse(req.body.features);
-
-    if (req.body.priceDetails)
-      setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
-
-    /* ================= OVERVIEW TEXT ================= */
-    if (req.body.overviewCategory && !req.files?.overviewImages?.length) {
-      setObj["Packages.$.overviewCategory"] = JSON.parse(
-        req.body.overviewCategory
-      );
-    }
-
-    /* ================= OVERVIEW IMAGES ================= */
-    if (req.files?.overviewImages?.length) {
-      // 🔥 DELETE OLD IMAGES USING STORED publicId
-      for (const img of existingPackage.overviewCategory?.[0]?.images || []) {
-        if (img.publicId) {
-          await deleteFromCloudinary(img.publicId);
-        }
-      }
-
-      // ✅ UPLOAD NEW IMAGES
-      const uploadedImages = [];
-
-      for (const file of req.files.overviewImages) {
-        const uploaded = await uploadOnCloudinary(file.path);
-
-        if (uploaded?.secure_url && uploaded?.public_id) {
-          uploadedImages.push({
-            url: uploaded.secure_url,
-            publicId: uploaded.public_id,
-          });
-        }
-      }
-
-      setObj["Packages.$.overviewCategory.0.images"] = uploadedImages;
-    }
-
-    /* ================= ICONS ================= */
-    if (req.files?.icons?.length) {
-      // 🔥 DELETE OLD ICONS USING STORED publicId
-      for (const icon of existingPackage.icons || []) {
-        if (icon.publicId) {
-          await deleteFromCloudinary(icon.publicId);
-        }
-      }
-
-      // ✅ UPLOAD NEW ICONS
-      const uploadedIcons = [];
-
-      for (const file of req.files.icons) {
-        const uploaded = await uploadOnCloudinary(file.path);
-
-        if (uploaded?.secure_url && uploaded?.public_id) {
-          uploadedIcons.push({
-            name: file.originalname,
-            url: uploaded.secure_url,
-            publicId: uploaded.public_id,
-          });
-        }
-      }
-
-      setObj["Packages.$.icons"] = uploadedIcons;
-    }
-
-    /* ================= NO UPDATE CHECK ================= */
-    if (Object.keys(setObj).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No valid updates",
-      });
-    }
-
-    /* ================= UPDATE DB ================= */
-    const updated = await travelPackageModel.findOneAndUpdate(
-      { "Packages._id": id },
-      { $set: setObj },
-      { new: true }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Package updated successfully",
-      data: updated.Packages.find((p) => p._id.toString() === id),
-    });
-  } catch (error) {
-    console.error("Update Error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// export const updateTravelPackage = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const setObj = {};
-
-//     // Fetch existing package FIRST
-//     const parentDoc = await travelPackageModel.findOne({
-//       "Packages._id": id,
-//     });
-
-//     if (!parentDoc) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Package not found" });
-//     }
-
-//     const existingPackage = parentDoc.Packages.find(
-//       (pkg) => pkg._id.toString() === id
-//     );
-
-//     /* ================= BASIC INFO ================= */
-//     if (req.body.title) setObj["Packages.$.title"] = req.body.title;
-
-//     if (req.body.location) setObj["Packages.$.location"] = req.body.location;
-
-//     if (req.body.rating) setObj["Packages.$.rating"] = Number(req.body.rating);
-
-//     if (req.body.subTripCategoryMain)
-//       setObj["Packages.$.subTripCategory.main"] = req.body.subTripCategoryMain;
-
-//     if (req.body.days)
-//       setObj["Packages.$.tripDuration.days"] = Number(req.body.days);
-
-//     if (req.body.nights)
-//       setObj["Packages.$.tripDuration.nights"] = Number(req.body.nights);
-
-//     if (req.body.features)
-//       setObj["Packages.$.features"] = JSON.parse(req.body.features);
-
-//     if (req.body.priceDetails)
-//       setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
-
-//     /* ================= OVERVIEW TEXT ================= */
-//     if (req.body.overviewCategory && !req.files?.overviewImages?.length) {
-//       setObj["Packages.$.overviewCategory"] = JSON.parse(
-//         req.body.overviewCategory
-//       );
-//     }
-
-//     /* ================= OVERVIEW IMAGES ================= */
-//     if (req.files?.overviewImages?.length) {
-//       // 🔥 DELETE OLD OVERVIEW IMAGES
-//       existingPackage.overviewCategory?.[0]?.images?.forEach(async (url) => {
-//         const publicId = getPublicIdFromUrl(url);
-//         await deleteFromCloudinary(publicId);
-//       });
-
-//       // ✅ UPLOAD NEW IMAGES
-//       const uploadedImages = [];
-//       for (const file of req.files.overviewImages) {
-//         const uploaded = await uploadOnCloudinary(file.path);
-//         if (uploaded?.secure_url) {
-//           uploadedImages.push(uploaded.secure_url);
-//         }
-//       }
-
-//       setObj["Packages.$.overviewCategory.0.images"] = uploadedImages;
-//     }
-
-//     /* ================= ICONS ================= */
-//     if (req.files?.icons?.length) {
-//       // 🔥 DELETE OLD ICONS
-//       existingPackage.icons?.forEach(async (icon) => {
-//         const publicId = getPublicIdFromUrl(icon.icon);
-//         await deleteFromCloudinary(publicId);
-//       });
-
-//       // ✅ UPLOAD NEW ICONS
-//       const uploadedIcons = [];
-//       for (const file of req.files.icons) {
-//         const uploaded = await uploadOnCloudinary(file.path);
-//         if (uploaded?.secure_url) {
-//           uploadedIcons.push({
-//             name: file.originalname,
-//             icon: uploaded.secure_url,
-//           });
-//         }
-//       }
-
-//       setObj["Packages.$.icons"] = uploadedIcons;
-//     }
-
-//     if (Object.keys(setObj).length === 0) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "No valid updates" });
-//     }
-
-//     const updated = await travelPackageModel.findOneAndUpdate(
-//       { "Packages._id": id },
-//       { $set: setObj },
-//       { new: true }
-//     );
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Package updated successfully",
-//       data: updated.Packages.find((p) => p._id.toString() === id),
-//     });
-//   } catch (error) {
-//     console.error("Update Error:", error);
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-export const deleteTravelPackage = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const deleted = await travelPackageModel.findOneAndUpdate(
-      { "Packages._id": id },
-      { $pull: { Packages: { _id: id } } },
-      { new: true }
-    );
-
-    if (!deleted) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Package not found" });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Travel package deleted successfully!",
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};

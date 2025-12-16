@@ -36,11 +36,11 @@ const priceSchema = new mongoose.Schema({
     enum: ["Double", "Triple"],
   },
   originalPrice: {
-    type: Number,
+    type: String,
     default: 0,
   },
   discountedPrice: {
-    type: Number,
+    type: String,
   },
   currency: {
     type: String,
