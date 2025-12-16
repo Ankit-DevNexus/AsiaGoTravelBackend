@@ -1,19 +1,15 @@
-// import multer from "multer";
-
-// const storage = multer.diskStorage({
-//   destination: "uploads/",
-//   filename: (req, file, cb) => {
-//     cb(null, Date.now() + "-" + file.originalname);
-//   },
-// });
-
-// const upload = multer({
-//   storage,
-//   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
-// });
-
 // export default upload;
 import multer from "multer";
+import fs from "fs";
+import path from "path";
+
+// Create uploads/ folder if not exists
+const uploadDir = path.join(process.cwd(), "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("Uploads folder created");
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

@@ -22,15 +22,15 @@ const allowedOrigins = [
 
   "http://194.238.18.1",
 
-  "http://ghardekhoapna.com",
-  "https://ghardekhoapna.com",
-  "http://www.ghardekhoapna.com",
-  "https://www.ghardekhoapna.com",
+  "http://asiagotravels.com",
+  "https://asiagotravels.com",
+  "http://www.asiagotravels.com",
+  "https://www.asiagotravels.com",
 
-  "http://dashboard.ghardekhoapna.com",
-  "https://dashboard.ghardekhoapna.com",
-  "http://www.dashboard.ghardekhoapna.com",
-  "https://www.dashboard.ghardekhoapna.com",
+  "http://dashboard.asiagotravels.com",
+  "https://dashboard.asiagotravels.com",
+  "http://www.dashboard.asiagotravels.com",
+  "https://www.dashboard.asiagotravels.com",
 ];
 
 app.use(

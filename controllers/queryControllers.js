@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// ✅ Helper function to send email
+//Helper function to send email
 const sendEmail = async (to, subject, htmlContent) => {
     try {
         const mailOptions = {
