@@ -84,7 +84,7 @@ const uploadOnCloudinary = async (localFilePath) => {
       folder: "travel-packages",
     });
 
-    console.log("File uploaded to Cloudinary:", response.secure_url);
+    // console.log("File uploaded to Cloudinary:", response.secure_url);
 
     // Delete local temp files
     await fs.promises.unlink(localFilePath);
@@ -107,7 +107,7 @@ const deleteFromCloudinary = async (publicId) => {
     const response = await cloudinary.uploader.destroy(publicId, {
       resource_type: "image",
     });
-    console.log("File deleted from Cloudinary:", response);
+    // console.log("File deleted from Cloudinary:", response);
     return response;
   } catch (error) {
     console.error("Error deleting file from Cloudinary:", error);
