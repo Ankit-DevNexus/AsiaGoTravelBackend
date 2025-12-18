@@ -37,10 +37,11 @@ const priceSchema = new mongoose.Schema({
   },
   originalPrice: {
     type: String,
-    default: 0,
+    default: "As per request",
   },
   discountedPrice: {
     type: String,
+    default:"As per request"
   },
   currency: {
     type: String,

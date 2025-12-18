@@ -9,98 +9,212 @@ export const filterTravelPackages = async (req, res) => {
   try {
     const {
       search,
-      tripCategory,
-      subTripCategory,
-      title,
-      location,
-      minBudget,
-      maxBudget,
-      minNights,
-      maxNights,
-      rating,
+      minPrice,
+      maxPrice,
+      departureCities,
+      countries,
+      minDays,
+      maxDays,
       famousDestinations,
     } = req.query;
 
     const pipeline = [];
 
-    // Unwind Packages
+    //  UNWIND PACKAGES
     pipeline.push({ $unwind: "$Packages" });
 
-    // Base Condition
-    const match = {
+    //  BASE MATCH
+    const baseMatch = {
       "Packages.isActive": true,
     };
 
-    //  Trip Category
-    if (tripCategory) {
-      match.tripCategory = tripCategory; // InternationalTrips / DomesticTrips
-    }
-
-    //  Sub Trip Category
-    if (subTripCategory) {
-      match["Packages.subTripCategory.main"] = subTripCategory;
-    }
-
-    //  Title Search
-    if (title) {
-      match["Packages.title"] = { $regex: title, $options: "i" };
-    }
-
-    //  Location Search
-    if (location) {
-      match["Packages.location"] = { $regex: location, $options: "i" };
-    }
-
-    //  Global Search (Search bar)
+    //  GLOBAL SEARCH
     if (search) {
-      match.$or = [
+      baseMatch.$or = [
         { "Packages.title": { $regex: search, $options: "i" } },
         { "Packages.location": { $regex: search, $options: "i" } },
         { "Packages.subTripCategory.main": { $regex: search, $options: "i" } },
         { "Packages.features": { $regex: search, $options: "i" } },
+        {
+          "Packages.overviewCategory.0.itinerary.0.title": {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          "Packages.overviewCategory.0.overview": {
+            $regex: search,
+            $options: "i",
+          },
+        },
       ];
     }
 
-    //  Duration (Nights)
-    if (minNights || maxNights) {
-      match["Packages.tripDuration.nights"] = {
-        $gte: Number(minNights) || 0,
-        $lte: Number(maxNights) || 100,
-      };
-    }
+    pipeline.push({ $match: baseMatch });
 
-    //  Budget Filter (priceDetails)
-    if (minBudget || maxBudget) {
+    //  PRICE RANGE (STRING SAFE)
+    if (minPrice || maxPrice) {
       pipeline.push({
-        $addFields: {
-          minPrice: {
-            $min: "$Packages.priceDetails.discountedPrice",
+        $match: {
+          $expr: {
+            $or: [
+              // Case 1: priceDetails empty or missing → include
+              {
+                $eq: [
+                  {
+                    $size: {
+                      $ifNull: ["$Packages.priceDetails", []],
+                    },
+                  },
+                  0,
+                ],
+              },
+
+              // Case 2: "As per request"
+              {
+                $eq: [
+                  {
+                    $ifNull: [
+                      {
+                        $arrayElemAt: [
+                          "$Packages.priceDetails.discountedPrice",
+                          0,
+                        ],
+                      },
+                      "As per request",
+                    ],
+                  },
+                  "As per request",
+                ],
+              },
+
+              // Case 3: numeric price comparison
+              {
+                $and: [
+                  {
+                    $regexMatch: {
+                      input: {
+                        $toString: {
+                          $arrayElemAt: [
+                            "$Packages.priceDetails.discountedPrice",
+                            0,
+                          ],
+                        },
+                      },
+                      regex: /^[0-9.]+$/,
+                    },
+                  },
+                  {
+                    $gte: [
+                      {
+                        $toDouble: {
+                          $arrayElemAt: [
+                            "$Packages.priceDetails.discountedPrice",
+                            0,
+                          ],
+                        },
+                      },
+                      Number(minPrice) || 0,
+                    ],
+                  },
+                  {
+                    $lte: [
+                      {
+                        $toDouble: {
+                          $arrayElemAt: [
+                            "$Packages.priceDetails.discountedPrice",
+                            0,
+                          ],
+                        },
+                      },
+                      Number(maxPrice) || 99999999,
+                    ],
+                  },
+                ],
+              },
+            ],
           },
         },
       });
-
-      match.minPrice = {
-        $gte: Number(minBudget) || 0,
-        $lte: Number(maxBudget) || 9999999,
-      };
     }
 
-    // Rating
-    if (rating) {
-      match["Packages.rating"] = { $gte: Number(rating) };
+    //  DEPARTURE CITIES (DAY 1 TITLE)
+    if (departureCities) {
+      const cities = Array.isArray(departureCities)
+        ? departureCities
+        : [departureCities];
+
+      pipeline.push({
+        $match: {
+          "Packages.overviewCategory.0.itinerary.0.title": {
+            $regex: cities.join("|"),
+            $options: "i",
+          },
+        },
+      });
     }
 
-    //  Famous Destinations
+    //  COUNTRY FILTER (TITLE + LOCATION)
+    if (countries) {
+      const countryArr = Array.isArray(countries) ? countries : [countries];
+
+      pipeline.push({
+        $match: {
+          $or: [
+            {
+              "Packages.title": {
+                $regex: countryArr.join("|"),
+                $options: "i",
+              },
+            },
+            {
+              "Packages.location": {
+                $regex: countryArr.join("|"),
+                $options: "i",
+              },
+            },
+          ],
+        },
+      });
+    }
+
+    //  TOUR DURATION
+    if (minDays || maxDays) {
+      pipeline.push({
+        $match: {
+          "Packages.tripDuration.days": {
+            $gte: Number(minDays) || 0,
+            $lte: Number(maxDays) || 100,
+          },
+        },
+      });
+    }
+
+    //  FAMOUS DESTINATIONS
     if (famousDestinations) {
-      const arr = Array.isArray(famousDestinations)
+      const destinations = Array.isArray(famousDestinations)
         ? famousDestinations
         : [famousDestinations];
 
-      match["Packages.location"] = { $in: arr };
+      pipeline.push({
+        $match: {
+          $or: [
+            {
+              "Packages.location": {
+                $regex: destinations.join("|"),
+                $options: "i",
+              },
+            },
+            {
+              "Packages.title": {
+                $regex: destinations.join("|"),
+                $options: "i",
+              },
+            },
+          ],
+        },
+      });
     }
-
-    //  APPLY MATCH
-    pipeline.push({ $match: match });
 
     //  CLEAN RESPONSE
     pipeline.push({
@@ -112,19 +226,140 @@ export const filterTravelPackages = async (req, res) => {
 
     const results = await travelPackageModel.aggregate(pipeline);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       count: results.length,
       data: results,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error applying filters",
       error: error.message,
     });
   }
 };
+
+// export const filterTravelPackages = async (req, res) => {
+//   try {
+//     const {
+//       search,
+//       tripCategory,
+//       subTripCategory,
+//       title,
+//       location,
+//       minBudget,
+//       maxBudget,
+//       minNights,
+//       maxNights,
+//       rating,
+//       famousDestinations,
+//     } = req.query;
+
+//     const pipeline = [];
+
+//     // Unwind Packages
+//     pipeline.push({ $unwind: "$Packages" });
+
+//     // Base Condition
+//     const match = {
+//       "Packages.isActive": true,
+//     };
+
+//     //  Trip Category
+//     if (tripCategory) {
+//       match.tripCategory = tripCategory; // InternationalTrips / DomesticTrips
+//     }
+
+//     //  Sub Trip Category
+//     if (subTripCategory) {
+//       match["Packages.subTripCategory.main"] = subTripCategory;
+//     }
+
+//     //  Title Search
+//     if (title) {
+//       match["Packages.title"] = { $regex: title, $options: "i" };
+//     }
+
+//     //  Location Search
+//     if (location) {
+//       match["Packages.location"] = { $regex: location, $options: "i" };
+//     }
+
+//     //  Global Search (Search bar)
+//     if (search) {
+//       match.$or = [
+//         { "Packages.title": { $regex: search, $options: "i" } },
+//         { "Packages.location": { $regex: search, $options: "i" } },
+//         { "Packages.subTripCategory.main": { $regex: search, $options: "i" } },
+//         { "Packages.features": { $regex: search, $options: "i" } },
+//       ];
+//     }
+
+//     //  Duration (Nights)
+//     if (minNights || maxNights) {
+//       match["Packages.tripDuration.nights"] = {
+//         $gte: Number(minNights) || 0,
+//         $lte: Number(maxNights) || 100,
+//       };
+//     }
+
+//     //  Budget Filter (priceDetails)
+//     if (minBudget || maxBudget) {
+//       pipeline.push({
+//         $addFields: {
+//           minPrice: {
+//             $min: "$Packages.priceDetails.discountedPrice",
+//           },
+//         },
+//       });
+
+//       match.minPrice = {
+//         $gte: Number(minBudget) || 0,
+//         $lte: Number(maxBudget) || 9999999,
+//       };
+//     }
+
+//     // Rating
+//     if (rating) {
+//       match["Packages.rating"] = { $gte: Number(rating) };
+//     }
+
+//     //  Famous Destinations
+//     if (famousDestinations) {
+//       const arr = Array.isArray(famousDestinations)
+//         ? famousDestinations
+//         : [famousDestinations];
+
+//       match["Packages.location"] = { $in: arr };
+//     }
+
+//     //  APPLY MATCH
+//     pipeline.push({ $match: match });
+
+//     //  CLEAN RESPONSE
+//     pipeline.push({
+//       $project: {
+//         tripCategory: 1,
+//         Packages: 1,
+//       },
+//     });
+
+//     const results = await travelPackageModel.aggregate(pipeline);
+
+//     return res.json({
+//       success: true,
+//       count: results.length,
+//       data: results,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Error applying filters",
+//       error: error.message,
+//     });
+//   }
+// };
 
 // export const suggestionController = async (req, res) => {
 //   try {
