@@ -8,7 +8,6 @@ import {
 } from "../utils/cloudinary.js";
 
 
-
 export const createTravelPackage = async (req, res) => {
   try {
     const { tripCategory, Packages } = req.body;
@@ -337,7 +336,7 @@ export const updateTravelPackage = async (req, res) => {
     const { id } = req.params;
     const setObj = {};
 
-    /* ================= FETCH EXISTING PACKAGE ================= */
+    // FETCH EXISTING PACKAGE 
     const parentDoc = await travelPackageModel.findOne({
       "Packages._id": id,
     });
@@ -353,7 +352,7 @@ export const updateTravelPackage = async (req, res) => {
       (pkg) => pkg._id.toString() === id
     );
 
-    /* ================= BASIC INFO ================= */
+    // BASIC INFO 
     if (req.body.title) setObj["Packages.$.title"] = req.body.title;
     if (req.body.location) setObj["Packages.$.location"] = req.body.location;
     if (req.body.rating)
@@ -375,7 +374,7 @@ export const updateTravelPackage = async (req, res) => {
     if (req.body.priceDetails)
       setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
 
-    /* ================= OVERVIEW CATEGORY ================= */
+    // OVERVIEW CATEGORY 
     let parsedOverviewCategory = null;
 
     if (req.body.overviewCategory) {
@@ -384,7 +383,7 @@ export const updateTravelPackage = async (req, res) => {
       parsedOverviewCategory = existingPackage.overviewCategory;
     }
 
-    /* ================= OVERVIEW IMAGES ================= */
+    // OVERVIEW IMAGES 
     if (req.files?.overviewImages?.length) {
       // Delete old images
       for (const img of existingPackage.overviewCategory?.[0]?.images || []) {
@@ -415,7 +414,7 @@ export const updateTravelPackage = async (req, res) => {
       setObj["Packages.$.overviewCategory"] = parsedOverviewCategory;
     }
 
-    /* ================= ICONS ================= */
+    // ICONS 
     if (req.files?.icons?.length) {
       // Delete old icons
       for (const icon of existingPackage.icons || []) {
@@ -441,7 +440,7 @@ export const updateTravelPackage = async (req, res) => {
       setObj["Packages.$.icons"] = uploadedIcons;
     }
 
-    /* ================= NO UPDATE CHECK ================= */
+    // NO UPDATE CHECK 
     if (!Object.keys(setObj).length) {
       return res.status(400).json({
         success: false,
@@ -449,7 +448,7 @@ export const updateTravelPackage = async (req, res) => {
       });
     }
 
-    /* ================= UPDATE DB ================= */
+    // UPDATE DB 
     const updatedDoc = await travelPackageModel.findOneAndUpdate(
       { "Packages._id": id },
       { $set: setObj },

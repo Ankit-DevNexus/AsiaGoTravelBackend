@@ -1,8 +1,5 @@
-import express from "express";
 import axios from "axios";
 import locationCacheModel from "../models/LocationCache.js";
-
-const router = express.Router();
 
 export const locationCacheController = async (req, res) => {
   try {
@@ -43,4 +40,3 @@ export const locationCacheController = async (req, res) => {
   }
 }
 
-export default router;
