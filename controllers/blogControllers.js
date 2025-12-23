@@ -35,7 +35,7 @@ export const BlogController = async (req, res) => {
       });
     }
 
-    // ✅ Upload image to Cloudinary
+    // Upload image to Cloudinary
     const uploadedImage = await uploadOnCloudinary(req.file.path);
     if (!uploadedImage || !uploadedImage.secure_url) {
       return res.status(500).json({
@@ -44,7 +44,7 @@ export const BlogController = async (req, res) => {
       });
     }
 
-    // ✅ Save blog
+    // Save blog
     const newBlog = await blogModel.create({
       title,
       blogContent,
@@ -60,7 +60,7 @@ export const BlogController = async (req, res) => {
       blog: newBlog,
     });
   } catch (err) {
-    console.error("❌ Error creating blog:", err);
+    console.error("Error creating blog:", err);
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -110,7 +110,7 @@ export const getBlogByIdController = async (req, res) => {
       blog,
     });
   } catch (err) {
-    console.error("❌ Error fetching blog:", err);
+    console.error("Error fetching blog:", err);
     res.status(500).json({
       success: false,
       message: "Error fetching blog",
@@ -140,7 +140,7 @@ export const BlogImageController = async (req, res) => {
       url: result.secure_url,
     });
   } catch (error) {
-    console.error("❌ Image upload failed:", error);
+    console.error("Image upload failed:", error);
     res.status(500).json({
       success: false,
       message: "Image upload failed",
@@ -176,7 +176,7 @@ export const EditBlogController = async (req, res) => {
     if (author) updateFields.author = author;
     if (category) updateFields.category = category;
 
-    // ✅ Replace image if new one uploaded
+    // Replace image if new one uploaded
     if (req.file) {
       const newImagePath = req.file.path;
 
@@ -187,9 +187,9 @@ export const EditBlogController = async (req, res) => {
           const fileName = parts[parts.length - 1];
           const publicId = `blogs/${fileName.split(".")[0]}`;
           await cloudinary.uploader.destroy(publicId);
-          console.log(`🗑️ Deleted old Cloudinary image: ${publicId}`);
+          console.log(`Deleted old Cloudinary image: ${publicId}`);
         } catch (err) {
-          console.warn("⚠️ Failed to delete old image:", err.message);
+          console.warn("Failed to delete old image:", err.message);
         }
       }
 
@@ -211,7 +211,7 @@ export const EditBlogController = async (req, res) => {
       blog: updatedBlog,
     });
   } catch (error) {
-    console.error("❌ Error updating blog:", error);
+    console.error("Error updating blog:", error);
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -239,16 +239,16 @@ export const DeleteBlogController = async (req, res) => {
       });
     }
 
-    // ✅ Delete image from Cloudinary
+    // Delete image from Cloudinary
     if (blog.featureImage) {
       try {
         const parts = blog.featureImage.split("/");
         const fileName = parts[parts.length - 1];
         const publicId = `blogs/${fileName.split(".")[0]}`;
         await cloudinary.uploader.destroy(publicId);
-        console.log(`🗑️ Deleted Cloudinary image: ${publicId}`);
+        console.log(`Deleted Cloudinary image: ${publicId}`);
       } catch (err) {
-        console.warn("⚠️ Failed to delete Cloudinary image:", err.message);
+        console.warn("Failed to delete Cloudinary image:", err.message);
       }
     }
 
@@ -259,7 +259,7 @@ export const DeleteBlogController = async (req, res) => {
       message: "Blog deleted successfully",
     });
   } catch (error) {
-    console.error("❌ Error deleting blog:", error);
+    console.error("Error deleting blog:", error);
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
