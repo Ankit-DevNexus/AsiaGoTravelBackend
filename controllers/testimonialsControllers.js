@@ -5,7 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 
 export const createTestimonial = async (req, res) => {
     try {
-        const { name, message, rating, date } = req.body;
+        const { name, message, rating } = req.body;
         if (!name|| !message || !rating) {
             return res.status(400).json({
                 success: false, message: "All required fields are needed"
@@ -24,7 +24,6 @@ export const createTestimonial = async (req, res) => {
             name,
             message,
             rating,
-            date,
             image: imageUrl,
         });
         res.status(201).json({

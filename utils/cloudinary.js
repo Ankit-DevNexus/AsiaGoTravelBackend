@@ -70,7 +70,7 @@ const uploadOnCloudinary = async (localFilePath) => {
     if (fileSize > maxSize) {
       const compressedPath = `compressed-${Date.now()}.jpg`;
       await sharp(localFilePath)
-        .resize({ width: 1920 }) // scale down to 1920 px width
+        // .resize({ width: 1920 }) // scale down to 1920 px width
         .jpeg({ quality: 80 }) // 80 % quality
         .toFile(compressedPath);
       fileToUpload = compressedPath;

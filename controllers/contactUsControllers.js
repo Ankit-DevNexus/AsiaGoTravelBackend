@@ -1,54 +1,72 @@
-
 import nodemailer from "nodemailer";
 import contactUsModel from "../models/contactUsModels.js";
 
-
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: Number(process.env.SMTP_PORT) === 465,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
 const sendEmail = async (to, subject, htmlContent) => {
-    try {
-        const mailOptions = {
-            from: `"Contact Us" <${process.env.EMAIL_USER}>`,
-            to,
-            subject,
-            html: htmlContent,
-        };
+  try {
+    const mailOptions = {
+      from: `"Contact Us" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html: htmlContent,
+    };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`Email Sent successfully to: ${to}`);
-        return info;
-    } catch (error) {
-        console.error("Error sending email:", error.message);
-        if (error.response) console.error("Gmail response:", error.response);
-        throw new Error("Failed to send email");
-    }
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email Sent successfully to: ${to}`);
+    return info;
+  } catch (error) {
+    console.error("Error sending email:", error.message);
+    if (error.response) console.error("Gmail response:", error.response);
+    throw new Error("Failed to send email");
+  }
 };
 
 // submit Contact us form
 export const submitContactUs = async (req, res) => {
-    try {
-        const { name, email, message } = req.body;
+  try {
+    const {
+      name,
+      phone,
+      email,
+      noOfTrvelers,
+      dateOfTravel,
+      destinationType,
+      destination,
+      noOfdays,
+      noOfNights,
+      message,
+    } = req.body;
 
-        if (!name || !email || !message) {
-            return res.status(400).json({ success: false, error: "All fields are required" });
-        }
+    if (!name || !email || !message) {
+      return res
+        .status(400)
+        .json({ success: false, error: "All fields are required" });
+    }
 
-        const newContact = await contactUsModel.create({
-            name,
-            email,
-            message
-        });
-        console.log("Form saved to database:", newContact._id);
+    const newContact = await contactUsModel.create({
+      name,
+      phone,
+      email,
+      noOfTrvelers,
+      dateOfTravel,
+      destinationType,
+      destination,
+      noOfdays,
+      noOfNights,
+      message,
+    });
+    // console.log("Form saved to database:", newContact._id);
 
-        const adminEmailHTML = `
+    const adminEmailHTML = `
   <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; padding: 20px; border-radius: 10px; color: #333; line-height: 1.6;">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #0078d4, #00bcd4); color: white; padding: 18px 24px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -85,8 +103,7 @@ export const submitContactUs = async (req, res) => {
   </div>
 `;
 
-
-  const userEmailHTML = `
+    const userEmailHTML = `
   <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
     <div style="background-color: #1E88E5; color: white; padding: 16px 24px;">
       <h2 style="margin: 0;">Thank You for Reaching Out, ${name}!</h2>
@@ -120,21 +137,23 @@ export const submitContactUs = async (req, res) => {
   </div>
 `;
 
+    await sendEmail(
+      process.env.ADMIN_EMAIL,
+      "New Contact Form Submission",
+      adminEmailHTML
+    );
+    await sendEmail(email, "Thanks for contacting us!", userEmailHTML);
 
-
-        await sendEmail(process.env.ADMIN_EMAIL, "New Contact Form Submission", adminEmailHTML);
-        await sendEmail(email, "Thanks for contacting us!", userEmailHTML);
-
-        return res.status(200).json({
-            success: true,
-            message: "Form submitted successfully and emails sent.",
-            data: newContact,
-        });
-    } catch (error) {
-        console.error("❌ Error in contact form:", error);
-        return res.status(500).json({
-            success: false,
-            error: "Internal Server Error",
-        });
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Form submitted successfully and emails sent.",
+      data: newContact,
+    });
+  } catch (error) {
+    console.error("❌ Error in contact form:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+    });
+  }
 };
