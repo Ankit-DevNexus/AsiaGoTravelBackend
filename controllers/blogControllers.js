@@ -2,7 +2,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import blogModel from "../models/blogModels.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import mongoose from "mongoose";
@@ -48,7 +51,8 @@ export const BlogController = async (req, res) => {
     const newBlog = await blogModel.create({
       title,
       blogContent,
-      featureImage: uploadedImage.secure_url,
+      url: uploadedImage.secure_url,
+      publicId: uploadedImage.public_id,
       ctaText: ctaText || "Plan your next trip with us ->",
       author: author || "Travel Expert Team",
       category,
@@ -71,7 +75,7 @@ export const BlogController = async (req, res) => {
 
 export const AllBlogController = async (req, res) => {
   try {
-    const blogs = await blogModel.find().sort({ createdAt: -1 }).limit(10);
+    const blogs = await blogModel.find().sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: blogs.length,
@@ -186,7 +190,9 @@ export const EditBlogController = async (req, res) => {
           const parts = blog.featureImage.split("/");
           const fileName = parts[parts.length - 1];
           const publicId = `blogs/${fileName.split(".")[0]}`;
-          await cloudinary.uploader.destroy(publicId);
+          if (blog.featureImage?.publicId) {
+            await deleteFromCloudinary(blog.featureImage.publicId);
+          }
           console.log(`Deleted old Cloudinary image: ${publicId}`);
         } catch (err) {
           console.warn("Failed to delete old image:", err.message);

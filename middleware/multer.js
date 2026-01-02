@@ -1,14 +1,11 @@
-// export default upload;
 import multer from "multer";
 import fs from "fs";
 import path from "path";
 
-// Create uploads/ folder if not exists
+// Ensure uploads folder exists
 const uploadDir = path.join(process.cwd(), "uploads");
-
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
-  console.log("Uploads folder created");
 }
 
 const storage = multer.diskStorage({
@@ -16,21 +13,56 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
+    cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
 
-// IMPORTANT: do NOT add fileFilter for now
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB file
-    fieldSize: 25 * 1024 * 1024, // 25MB text field (IMPORTANT)
-    fields: 100, // max number of fields
+    fileSize: 10 * 1024 * 1024,   // 10MB per image
+    fieldSize: 25 * 1024 * 1024,  // blog HTML text
+    fields: 100,
   },
 });
 
 export default upload;
+
+
+
+// // export default upload;
+// import multer from "multer";
+// import fs from "fs";
+// import path from "path";
+
+// // Create uploads/ folder if not exists
+// const uploadDir = path.join(process.cwd(), "uploads");
+
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+//   console.log("Uploads folder created");
+// }
+
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, "uploads/");
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, Date.now() + "-" + file.originalname);
+//   },
+// });
+
+// // IMPORTANT: do NOT add fileFilter for now
+// const upload = multer({
+//   storage,
+//   limits: {
+//     fileSize: 10 * 1024 * 1024, // 10MB file
+//     fieldSize: 25 * 1024 * 1024, // 25MB text field (IMPORTANT)
+//     fields: 100, // max number of fields
+//   },
+// });
+
+// export default upload;
 
 // import multer from "multer";
 

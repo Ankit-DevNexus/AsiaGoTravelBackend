@@ -103,29 +103,15 @@ router.delete("/testimonial/delete/:id", deleteTestimonial);
 router.get("/sync-google", syncGoogleReviews);
 
 // Blog Controllers
-router.post(
-  "/blogPost",
-  protect,
-  upload.single("featureImage"),
-  BlogController
-);
+router.post("/blogPost",protect,upload.single("featureImage"),BlogController);
 
 router.get("/allBlog", AllBlogController);
 
 router.get("/allBlog/:id", getBlogByIdController);
 
-router.post(
-  "/upload-image",
-  upload.single("featureImage"),
-  BlogImageController
-);
+router.post("/upload-image", upload.single("image"), BlogImageController);
 
-router.patch(
-  "/blog/edit/:id",
-  protect,
-  upload.single("featureImage"),
-  EditBlogController
-);
+router.patch("/blog/edit/:id",protect,upload.single("featureImage"),EditBlogController);
 
 router.delete("/blog/delete/:id", protect, DeleteBlogController);
 
@@ -178,7 +164,7 @@ router.get("/location/search", locationCacheController);
 
 // Join Team Routes
 
-router.post("/jointeam", upload.single("cvFile"),  JoinOurTeam);
+router.post("/jointeam", upload.single("cvFile"), JoinOurTeam);
 router.get("/jointeam/all", getJoinedTeamRecords);
 
 router.get("/jointeam/:id", getJoinedTeamRecordById);
