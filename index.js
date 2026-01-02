@@ -1,8 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-
 import express from "express";
-
 import cors from "cors";
 import mongoose from "mongoose";
 import Routes from "./Routes/routes.js";
@@ -58,7 +56,6 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api", Routes);
 app.use(express.json());
 
-// for testing
 app.get("/", (req, res) => {
   res.send("API is running");
 });
