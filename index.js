@@ -63,7 +63,6 @@ app.get("/", (req, res) => {
   res.send("AsiaGoTravel");
 });
 
-// mongodb connection
 mongoose
   .connect(uri)
   .then(() => {
