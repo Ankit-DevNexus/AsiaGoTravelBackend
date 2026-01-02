@@ -60,7 +60,7 @@ app.use(express.json());
 
 // for testing
 app.get("/", (req, res) => {
-  res.send("AsiaGoTravel");
+  res.send("API is running");
 });
 
 mongoose
