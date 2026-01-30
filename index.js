@@ -15,13 +15,6 @@ const app = express();
 
 // CORS CONFIG
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:3000",
-
-  "http://194.238.18.1",
-
   "http://asiagotravels.com",
   "https://asiagotravels.com",
   "http://www.asiagotravels.com",
