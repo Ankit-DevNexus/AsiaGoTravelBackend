@@ -5,7 +5,7 @@ const imageSchema = new mongoose.Schema(
     url: { type: String },
     publicId: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const itinerarySchema = new mongoose.Schema({
@@ -35,6 +35,7 @@ const priceSchema = new mongoose.Schema({
     type: String,
     enum: ["Double", "Triple"],
   },
+
   originalPrice: {
     type: String,
     default: "As per request",
@@ -52,6 +53,11 @@ const priceSchema = new mongoose.Schema({
     trim: true,
     default: "Per Person",
   },
+  priceDescription: {
+    type: String,
+    trim: true,
+    default: "Per Person on triple sharing occupancy",
+  },
 });
 
 const subCategorySchema = new mongoose.Schema({
@@ -66,7 +72,7 @@ const iconSchema = new mongoose.Schema(
     url: { type: String },
     publicId: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const travelPackageSchema = new mongoose.Schema(
@@ -109,7 +115,7 @@ const travelPackageSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const tripCategorySchema = new mongoose.Schema(
@@ -120,7 +126,7 @@ const tripCategorySchema = new mongoose.Schema(
     },
     Packages: [travelPackageSchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const travelPackageModel = mongoose.model("travelpackage", tripCategorySchema);

@@ -1,11 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config();
-
+import mongoose from "mongoose";
 import travelPackageModel from "../models/travelPackageModels.js";
 import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+
 
 
 export const createTravelPackage = async (req, res) => {
@@ -33,16 +34,17 @@ export const createTravelPackage = async (req, res) => {
     try {
       parsedPackages =
         typeof Packages === "string" ? JSON.parse(Packages) : Packages;
-    } catch {
+    } catch (error) {
       return res.status(400).json({
         success: false,
-        message: "Invalid Packages JSON format",
+        message: error.message,
+        error,
       });
     }
 
     const pkg = parsedPackages[0];
 
-      //  Upload Overview Images
+    //  Upload Overview Images
     let uploadedOverviewImages = [];
 
     if (req.files?.overviewImages?.length) {
@@ -78,7 +80,7 @@ export const createTravelPackage = async (req, res) => {
       }
     }
 
-      //  Prepare Package Object
+    //  Prepare Package Object
     const newPackage = {
       subTripCategory: pkg.subTripCategory,
       title: pkg.title,
@@ -103,7 +105,6 @@ export const createTravelPackage = async (req, res) => {
       isActive: pkg.isActive ?? true,
     };
 
-    
     //  Save to MongoDB
     let category = await travelPackageModel.findOne({ tripCategory });
 
@@ -176,7 +177,7 @@ export const getAllTravelPackageById = async (req, res) => {
     }
 
     const travelPackage = category.Packages.find(
-      (pkg) => pkg._id.toString() === id
+      (pkg) => pkg._id.toString() === id,
     );
 
     res.status(200).json({
@@ -246,7 +247,6 @@ export const getAllTravelPackageById = async (req, res) => {
 //     } else {
 //       parsedOverviewCategory = existingPackage.overviewCategory;
 //     }
-
 
 //     /* ================= OVERVIEW IMAGES ================= */
 //     if (req.files?.overviewImages?.length) {
@@ -330,15 +330,16 @@ export const getAllTravelPackageById = async (req, res) => {
 //   }
 // };
 
-
 export const updateTravelPackage = async (req, res) => {
   try {
     const { id } = req.params;
-    const setObj = {};
+    const packageId = new mongoose.Types.ObjectId(id);
 
-    // FETCH EXISTING PACKAGE 
+    // console.log(req.body.priceDetails);
+
+    /* ================= FIND PACKAGE ================= */
     const parentDoc = await travelPackageModel.findOne({
-      "Packages._id": id,
+      "Packages._id": packageId,
     });
 
     if (!parentDoc) {
@@ -349,96 +350,102 @@ export const updateTravelPackage = async (req, res) => {
     }
 
     const existingPackage = parentDoc.Packages.find(
-      (pkg) => pkg._id.toString() === id
+      (p) => p._id.toString() === id,
     );
 
-    // BASIC INFO 
-    if (req.body.title) setObj["Packages.$.title"] = req.body.title;
-    if (req.body.location) setObj["Packages.$.location"] = req.body.location;
+    /* ================= UPDATE OBJECT ================= */
+    const setObj = {};
+
+    /* ================= BASIC FIELDS ================= */
+    if (req.body.title) setObj["Packages.$[pkg].title"] = req.body.title;
+
+    if (req.body.location)
+      setObj["Packages.$[pkg].location"] = req.body.location;
+
     if (req.body.rating)
-      setObj["Packages.$.rating"] = Number(req.body.rating);
+      setObj["Packages.$[pkg].rating"] = Number(req.body.rating);
 
     if (req.body.subTripCategoryMain)
-      setObj["Packages.$.subTripCategory.main"] =
+      setObj["Packages.$[pkg].subTripCategory.main"] =
         req.body.subTripCategoryMain;
 
     if (req.body.days)
-      setObj["Packages.$.tripDuration.days"] = Number(req.body.days);
+      setObj["Packages.$[pkg].tripDuration.days"] = Number(req.body.days);
 
     if (req.body.nights)
-      setObj["Packages.$.tripDuration.nights"] = Number(req.body.nights);
+      setObj["Packages.$[pkg].tripDuration.nights"] = Number(req.body.nights);
 
     if (req.body.features)
-      setObj["Packages.$.features"] = JSON.parse(req.body.features);
+      setObj["Packages.$[pkg].features"] = JSON.parse(req.body.features);
 
     if (req.body.priceDetails)
-      setObj["Packages.$.priceDetails"] = JSON.parse(req.body.priceDetails);
+      setObj["Packages.$[pkg].priceDetails"] = JSON.parse(
+        req.body.priceDetails,
+      );
 
-    // OVERVIEW CATEGORY 
-    let parsedOverviewCategory = null;
+    // console.log("RAW ICON DATA =>", req.body.iconsData);
+    // console.log("TYPE =>", typeof req.body.iconsData);
+
+    /* ================= ICONS ================= */
+    if (req.body.iconsData) {
+      const parsedIcons = JSON.parse(req.body.iconsData);
+      setObj["Packages.$[pkg].icons"] = parsedIcons;
+    }
+
+    /* ================= OVERVIEW CATEGORY ================= */
+    let overview = existingPackage.overviewCategory?.[0] || {};
 
     if (req.body.overviewCategory) {
-      parsedOverviewCategory = JSON.parse(req.body.overviewCategory);
-    } else {
-      parsedOverviewCategory = existingPackage.overviewCategory;
+      const parsed = JSON.parse(req.body.overviewCategory);
+      overview = parsed[0] || overview;
     }
 
-    // OVERVIEW IMAGES 
-    if (req.files?.overviewImages?.length) {
-      // Delete old images
-      for (const img of existingPackage.overviewCategory?.[0]?.images || []) {
-        if (img.publicId) {
-          await deleteFromCloudinary(img.publicId);
-        }
+    /* ================= IMAGE SYNC ================= */
+    const existingImages = existingPackage.overviewCategory?.[0]?.images || [];
+    let keepImages = overview.images || [];
+
+    // keep only images that frontend sent back
+    const keepPublicIds = keepImages.map((img) => img.publicId).filter(Boolean);
+
+    // delete removed images
+    for (const img of existingImages) {
+      if (img.publicId && !keepPublicIds.includes(img.publicId)) {
+        await deleteFromCloudinary(img.publicId);
       }
+    }
 
-      // Upload new images
-      const uploadedImages = [];
-
+    // upload new files
+    const newUploads = [];
+    if (req.files?.overviewImages?.length) {
       for (const file of req.files.overviewImages) {
         const uploaded = await uploadOnCloudinary(file.path);
-
         if (uploaded?.secure_url && uploaded?.public_id) {
-          uploadedImages.push({
+          newUploads.push({
             url: uploaded.secure_url,
             publicId: uploaded.public_id,
           });
         }
       }
-
-      parsedOverviewCategory[0].images = uploadedImages;
     }
 
-    // Set full overviewCategory
-    if (parsedOverviewCategory) {
-      setObj["Packages.$.overviewCategory"] = parsedOverviewCategory;
-    }
+    const finalImages = [
+      ...keepImages.filter((img) => img.publicId),
+      ...newUploads,
+    ];
 
-    // ICONS 
-    if (req.files?.icons?.length) {
-      // Delete old icons
-      for (const icon of existingPackage.icons || []) {
-        if (icon.publicId) {
-          await deleteFromCloudinary(icon.publicId);
-        }
-      }
+    /* ================= BUILD FINAL OVERVIEW ================= */
+    const finalOverview = [
+      {
+        overview: overview.overview || "",
+        itinerary: overview.itinerary || [],
+        inclusions: overview.inclusions || [],
+        exclusions: overview.exclusions || [],
+        summary: overview.summary || [],
+        images: finalImages,
+      },
+    ];
 
-      const uploadedIcons = [];
-
-      for (const file of req.files.icons) {
-        const uploaded = await uploadOnCloudinary(file.path);
-
-        if (uploaded?.secure_url && uploaded?.public_id) {
-          uploadedIcons.push({
-            name: file.originalname,
-            url: uploaded.secure_url,
-            publicId: uploaded.public_id,
-          });
-        }
-      }
-
-      setObj["Packages.$.icons"] = uploadedIcons;
-    }
+    setObj["Packages.$[pkg].overviewCategory"] = finalOverview;
 
     // NO UPDATE CHECK 
     if (!Object.keys(setObj).length) {
@@ -448,15 +455,29 @@ export const updateTravelPackage = async (req, res) => {
       });
     }
 
-    // UPDATE DB 
-    const updatedDoc = await travelPackageModel.findOneAndUpdate(
-      { "Packages._id": id },
+    /* ================= UPDATE DB ================= */
+    const result = await travelPackageModel.updateOne(
+      { "Packages._id": packageId },
       { $set: setObj },
-      { new: true }
+      {
+        arrayFilters: [{ "pkg._id": packageId }],
+      },
     );
 
+    if (result.modifiedCount === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No changes detected",
+      });
+    }
+
+    /* ================= FETCH UPDATED ================= */
+    const updatedDoc = await travelPackageModel.findOne({
+      "Packages._id": packageId,
+    });
+
     const updatedPackage = updatedDoc.Packages.find(
-      (pkg) => pkg._id.toString() === id
+      (p) => p._id.toString() === id,
     );
 
     return res.status(200).json({
@@ -480,7 +501,7 @@ export const deleteTravelPackage = async (req, res) => {
     const deleted = await travelPackageModel.findOneAndUpdate(
       { "Packages._id": id },
       { $pull: { Packages: { _id: id } } },
-      { new: true }
+      { new: true },
     );
 
     if (!deleted) {
@@ -497,7 +518,6 @@ export const deleteTravelPackage = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 // Helper function to safely parse JSON
 // const parseIfString = (value) => {
@@ -575,8 +595,6 @@ export const deleteTravelPackage = async (req, res) => {
 //     });
 //   }
 // };
-
-
 
 // export const updateTravelPackage = async (req, res) => {
 //   try {
@@ -692,9 +710,6 @@ export const deleteTravelPackage = async (req, res) => {
 //     res.status(500).json({ success: false, message: error.message });
 //   }
 // };
-
-
-
 
 // export const updateTravelPackage = async (req, res) => {
 //   try {
