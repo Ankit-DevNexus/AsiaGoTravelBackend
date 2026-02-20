@@ -387,10 +387,56 @@ export const updateTravelPackage = async (req, res) => {
     // console.log("TYPE =>", typeof req.body.iconsData);
 
     /* ================= ICONS ================= */
+    /* ================= ICON SYNC ================= */
+
+    // existing icons in DB
+    const existingIcons = existingPackage.icons || [];
+
+    // icons frontend wants to keep
+    let keepIcons = [];
+
     if (req.body.iconsData) {
-      const parsedIcons = JSON.parse(req.body.iconsData);
-      setObj["Packages.$[pkg].icons"] = parsedIcons;
+      const parsed = JSON.parse(req.body.iconsData);
+      keepIcons = parsed || [];
     }
+
+    // publicIds to keep
+    const keepIconPublicIds = keepIcons
+      .map((ic) => ic.publicId)
+      .filter(Boolean);
+
+    // delete removed icons from cloudinary
+    for (const icon of existingIcons) {
+      if (icon.publicId && !keepIconPublicIds.includes(icon.publicId)) {
+        await deleteFromCloudinary(icon.publicId);
+      }
+    }
+
+    // upload new icon files
+    const newIconUploads = [];
+
+    if (req.files?.icons?.length) {
+      for (const file of req.files.icons) {
+        const uploaded = await uploadOnCloudinary(file.path);
+
+        if (uploaded?.secure_url && uploaded?.public_id) {
+          newIconUploads.push({
+            name: file.originalname,
+            url: uploaded.secure_url,
+            publicId: uploaded.public_id,
+          });
+        }
+      }
+    }
+
+    // final icons array
+    const finalIcons = [
+      ...keepIcons.filter((ic) => ic.publicId),
+      ...newIconUploads,
+    ];
+
+    // set in update object
+    setObj["Packages.$[pkg].icons"] = finalIcons;
 
     /* ================= OVERVIEW CATEGORY ================= */
     let overview = existingPackage.overviewCategory?.[0] || {};

@@ -49,6 +49,22 @@ import sharp from "sharp";
 
 dotenv.config();
 
+import path from "path";
+
+const safeDelete = async (filePath) => {
+  if (!filePath) return;
+
+  try {
+    const absolutePath = path.resolve(filePath);
+    await fs.promises.unlink(absolutePath);
+    console.log("Deleted:", absolutePath);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.error("Delete failed:", filePath, err.message);
+    }
+  }
+};
+
 const { v2: cloudinary } = pkg;
 
 cloudinary.config({
@@ -58,49 +74,42 @@ cloudinary.config({
 });
 
 const uploadOnCloudinary = async (localFilePath) => {
+  let fileToUpload = localFilePath;
+  let compressedPath = null;
+
   try {
     if (!localFilePath) return null;
 
     const stats = fs.statSync(localFilePath);
     const fileSize = stats.size;
-    const maxSize = 10 * 1024 * 1024; // 10 MB Cloudinary free limit
-    let fileToUpload = localFilePath;
+    const maxSize = 10 * 1024 * 1024;
 
-    // Compress if file > 10 MB
     if (fileSize > maxSize) {
-      const compressedPath = `compressed-${Date.now()}.jpg`;
+      compressedPath = `compressed-${Date.now()}.jpg`;
+
       await sharp(localFilePath)
-        // .resize({ width: 1920 }) // scale down to 1920 px width
-        .jpeg({ quality: 80 }) // 80 % quality
+        .resize({ width: 1920 })
+        .jpeg({ quality: 80 })
         .toFile(compressedPath);
+
       fileToUpload = compressedPath;
-      console.log("Image compressed before upload:", compressedPath);
     }
 
-    // Upload
     const response = await cloudinary.uploader.upload(fileToUpload, {
       resource_type: "auto",
       timeout: 20000,
       folder: "travel-packages",
     });
 
-    // console.log("File uploaded to Cloudinary:", response.secure_url);
-
-    // Delete local temp files
-    await fs.promises.unlink(localFilePath);
-    if (fileToUpload !== localFilePath && fs.existsSync(fileToUpload)) {
-      await fs.promises.unlink(fileToUpload);
-    }
-
     return response;
   } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
-    if (fs.existsSync(localFilePath)) await fs.promises.unlink(localFilePath);
+    console.error("Upload error:", error);
     return null;
+  } finally {
+    await safeDelete(localFilePath);
+    if (compressedPath) await safeDelete(compressedPath);
   }
 };
-
-
 
 const deleteFromCloudinary = async (publicId) => {
   try {
