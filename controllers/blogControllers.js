@@ -51,8 +51,10 @@ export const BlogController = async (req, res) => {
     const newBlog = await blogModel.create({
       title,
       blogContent,
-      url: uploadedImage.secure_url,
-      publicId: uploadedImage.public_id,
+      featureImage: {
+        url: uploadedImage.secure_url,
+        publicId: uploadedImage.public_id,
+      },
       ctaText: ctaText || "Plan your next trip with us ->",
       author: author || "Travel Expert Team",
       category,
